@@ -1,0 +1,273 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# victory <victory.deb@gmail.com>, 2012.
+# Takuma Yamada <tyamada@takumayamada.com>, 2016.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: glance\n"
+"Report-Msgid-Bugs-To: gnocchi@packages.debian.org\n"
+"POT-Creation-Date: 2016-03-29 13:10+0000\n"
+"PO-Revision-Date: 2016-03-17 10:06+0900\n"
+"Last-Translator: Takuma Yamada <tyamada@takumayamada.com>\n"
+"Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Gtranslator 2.91.6\n"
+
+#. Type: string
+#. Description
+#: ../gnocchi-common.templates:2001
+msgid "Authentication server hostname:"
+msgstr "認証サーバのホスト名:"
+
+#. Type: string
+#. Description
+#: ../gnocchi-common.templates:2001
+msgid ""
+"Please specify the hostname of the authentication server for Gnocchi. "
+"Typically this is also the hostname of the OpenStack Identity Service "
+"(Keystone)."
+msgstr ""
+"Gnocchi 用認証サーバのホスト名を指定してください。通常これは OpenStack "
+"Identity Service (Keystone) のホスト名と同じです。"
+
+#. Type: string
+#. Description
+#. Translators: a "tenant" in OpenStack world is
+#. an entity that contains one or more username/password couples.
+#. It's typically the tenant that will be used for billing. Having more than one
+#. username/password is very helpful in larger organization.
+#. You're advised to either keep "tenant" without translating it
+#. or keep it parenthezised. Example for French:
+#. locataire ("tenant")
+#: ../gnocchi-common.templates:3001
+msgid "Authentication server tenant name:"
+msgstr "認証サーバのテナント (tenant) 名:"
+
+#. Type: string
+#. Description
+#. Translators: a "tenant" in OpenStack world is
+#. an entity that contains one or more username/password couples.
+#. It's typically the tenant that will be used for billing. Having more than one
+#. username/password is very helpful in larger organization.
+#. You're advised to either keep "tenant" without translating it
+#. or keep it parenthezised. Example for French:
+#. locataire ("tenant")
+#: ../gnocchi-common.templates:3001
+msgid "Please specify the authentication server tenant name."
+msgstr "認証サーバのテナント (tenant) 名を指定してください。"
+
+#. Type: string
+#. Description
+#: ../gnocchi-common.templates:4001
+msgid "Authentication server username:"
+msgstr "認証サーバのユーザ名:"
+
+#. Type: string
+#. Description
+#: ../gnocchi-common.templates:4001
+msgid "Please specify the username to use with the authentication server."
+msgstr "認証サーバで使用するユーザ名を指定してください。"
+
+#. Type: password
+#. Description
+#: ../gnocchi-common.templates:5001
+msgid "Authentication server password:"
+msgstr "認証サーバのパスワード:"
+
+#. Type: password
+#. Description
+#: ../gnocchi-common.templates:5001
+msgid "Please specify the password to use with the authentication server."
+msgstr "認証サーバで使用するパスワードを指定してください。"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-common.templates:6001
+msgid "Set up a database for Gnocchi?"
+msgstr "Gnocchi 用のデータベースを用意しますか?"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-common.templates:6001
+msgid ""
+"No database has been set up for Gnocchi to use. Before continuing, you "
+"should make sure you have the following information:"
+msgstr ""
+"Gnocchi で使用するために設定されたデータベースがありません。続行する前に、以"
+"下の情報が揃っていることを確認してください:"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-common.templates:6001
+msgid ""
+" * the type of database that you want to use;\n"
+" * the database server hostname (that server must allow TCP connections from "
+"this\n"
+"   machine);\n"
+" * a username and password to access the database."
+msgstr ""
+" * 使用するデータベースの種類\n"
+" * データベースサーバのホスト名 (そのサーバは、このマシンからの\n"
+"   TCP 接続を許可する必要があります)\n"
+" * データベースにアクセスするためのユーザ名とパスワード"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-common.templates:6001
+msgid ""
+"If some of these requirements are missing, do not choose this option and run "
+"with regular SQLite support."
+msgstr ""
+"これらの要件が欠落している場合は、このオプションを選択しないでください。そし"
+"て、標準 SQLite サポートで実行してください。"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-common.templates:6001
+msgid ""
+"You can change this setting later on by running \"dpkg-reconfigure -plow "
+"gnocchi-common\"."
+msgstr ""
+"「dpkg-reconfigure -plow gnocchi-common」の実行により、この設定を後で変更する"
+"ことができます。"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-api.templates:2001
+msgid "Register Gnocchi in the Keystone endpoint catalog?"
+msgstr "Gnocchi を Keystone のエンドポイントのカタログに登録しますか?"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-api.templates:2001
+msgid ""
+"Each OpenStack service (each API) should be registered in order to be "
+"accessible. This is done using \"keystone service-create\" and \"keystone "
+"endpoint-create\". This can be done automatically now."
+msgstr ""
+"各 OpenStack のサービス (各 API ) がアクセスできるようにするために登録する必"
+"要があります。これは「keystone service-create」と「keystone endpoint-create」"
+"を使用して行われます。これは自動的に行うことができます。"
+
+#. Type: boolean
+#. Description
+#: ../gnocchi-api.templates:2001
+#, fuzzy
+#| msgid ""
+#| "Note that you will need to have an up and running Keystone server on "
+#| "which to connect using the Keystone authentication token."
+msgid ""
+"Note that you will need to have an up and running Keystone server on which "
+"to connect using a known admin project name, admin username and password. "
+"The admin auth token is not used anymore."
+msgstr ""
+"Keystone 認証トークンを使って接続するには、Keystone サーバの起動および実行が"
+"必要になりますので注意してください。"
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:3001
+msgid "Keystone server IP address:"
+msgstr "Keystone サーバの IP アドレス:"
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:3001
+msgid ""
+"Please enter the IP address of the Keystone server, so that gnocchi-api can "
+"contact Keystone to do the Gnocchi service and endpoint creation."
+msgstr ""
+"Keystone サーバの IP アドレスを入力してください。その結果 gnocchi-api は、"
+"Gnocchi サービスやエンドポイント作成を行うために Keystone へ通信することがで"
+"きます。"
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:4001
+#, fuzzy
+#| msgid "Keystone authentication token:"
+msgid "Keystone admin name:"
+msgstr "Keystone 認証トークン:"
+
+#. Type: string
+#. Description
+#. Type: string
+#. Description
+#. Type: password
+#. Description
+#: ../gnocchi-api.templates:4001 ../gnocchi-api.templates:5001
+#: ../gnocchi-api.templates:6001
+msgid ""
+"To register the service endpoint, this package needs to know the Admin "
+"login, name, project name, and password to the Keystone server."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:5001
+msgid "Keystone admin project name:"
+msgstr ""
+
+#. Type: password
+#. Description
+#: ../gnocchi-api.templates:6001
+msgid "Keystone admin password:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:7001
+msgid "Gnocchi endpoint IP address:"
+msgstr "Gnocchi エンドポイントの IP アドレス:"
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:7001
+msgid "Please enter the IP address that will be used to contact Gnocchi."
+msgstr "Gnocchi の通信に使用される IP アドレスを入力してください。"
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:7001
+msgid ""
+"This IP address should be accessible from the clients that will use this "
+"service, so if you are installing a public cloud, this should be a public IP "
+"address."
+msgstr ""
+"この IP アドレスは、このサービスを利用するクライアントからアクセス可能でなけ"
+"ればならないので、パブリッククラウドをインストールしている場合、これはパブ"
+"リック IP アドレスでなければなりません。"
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:8001
+msgid "Name of the region to register:"
+msgstr "登録するリージョンの名前:"
+
+#. Type: string
+#. Description
+#: ../gnocchi-api.templates:8001
+msgid ""
+"OpenStack supports using availability zones, with each region representing a "
+"location. Please enter the zone that you wish to use when registering the "
+"endpoint."
+msgstr ""
+"OpenStack は、場所を表すリージョン毎に、アベイラビリティーゾーンの使用をサ"
+"ポートします。エンドポイントを登録する際に、使用するゾーンを入力してくださ"
+"い。"
+
+#~| msgid ""
+#~| "To configure its endpoint in Keystone, glance-api needs the Keystone "
+#~| "auth token."
+#~ msgid ""
+#~ "To configure its endpoint in Keystone, gnocchi-api needs the Keystone "
+#~ "authentication token."
+#~ msgstr ""
+#~ "Keystone でエンドポイントを設定するには、glance-api は Keystone 認証トーク"
+#~ "ンを必要とします。"

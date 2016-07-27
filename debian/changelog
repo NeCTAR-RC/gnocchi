@@ -1,0 +1,77 @@
+gnocchi (2.0.2-4) unstable; urgency=medium
+
+  * Uploading to unstable.
+  * Updated ja.po debconf translation (closes: #819135).
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 05 Apr 2016 11:02:48 +0200
+
+gnocchi (2.0.2-3) experimental; urgency=medium
+
+  * Added missing (build-)depends: python-lz4.
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 29 Mar 2016 13:29:28 +0000
+
+gnocchi (2.0.2-2) experimental; urgency=medium
+
+  * Do not use Keystone admin auth token to register API endpoints.
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 29 Mar 2016 13:10:49 +0000
+
+gnocchi (2.0.2-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Fixed (build-)depends for this release.
+  * Rename again GNOCCHI_INDEXER_URL env var (upstream constantly changes it).
+  * Standards-Version: 3.9.7 (no change).
+
+ -- Thomas Goirand <zigo@debian.org>  Wed, 09 Mar 2016 14:05:32 +0100
+
+gnocchi (1.3.4-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Clean /var/{lib,log}/gnocchi on purge (Closes: #810700).
+  * Added nl.po debconf translation (Closes: #812356).
+  * Fixed running tests with pgsql (ie: GNOCCHI_TEST_INDEXER_URL env var).
+  * HTTPS VCS URLs.
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 02 Feb 2016 09:15:03 +0000
+
+gnocchi (1.3.3+2016.01.27.git.e1339d77a9-1) unstable; urgency=medium
+
+  * New upstream release based on commit e1339d77a9.
+  * Removed influxdb and influxdb-dev from build-depends-indep.
+  * Do not build-depends on python-ceilometer.
+  * Fixed python-future version to be >= 0.15.
+  * Fixed (build-)depends for this release.
+  * Pushes app.wsgi to /usr/share/gnocchi-common.
+  * Fixed debian/copyright ordering.
+  * Follow upstream rename of GNOCCHI_TEST_INDEXER_URL to GNOCCHI_INDEXER_URL.
+  * Fixed namespaces when generating config file.
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 28 Jan 2016 04:13:02 +0000
+
+gnocchi (1.3.0-4) unstable; urgency=medium
+
+  * French debconf templates translation update (Closes: #806506).
+
+ -- Thomas Goirand <zigo@debian.org>  Wed, 02 Dec 2015 10:21:02 +0100
+
+gnocchi (1.3.0-3) unstable; urgency=medium
+
+  * Added missing dbconfig-common dependency (Closes: #806538).
+
+ -- Thomas Goirand <zigo@debian.org>  Wed, 02 Dec 2015 08:22:21 +0000
+
+gnocchi (1.3.0-2) unstable; urgency=medium
+
+  * Adds missing config file: api-paste.ini.
+  * Fixed auth_protocol to be http by default.
+  * Added debconf translations imported from Glance.
+
+ -- Thomas Goirand <zigo@debian.org>  Wed, 25 Nov 2015 13:18:12 +0000
+
+gnocchi (1.3.0-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #799374)
+
+ -- Thomas Goirand <zigo@debian.org>  Fri, 27 Mar 2015 10:32:47 +0100
