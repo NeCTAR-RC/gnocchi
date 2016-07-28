@@ -1,5 +1,5 @@
 [gerrit]
-host=review.openstack.org
+host=review.rc.nectar.org.au
 port=29418
-project=openstack/gnocchi.git
-defaultbranch=stable/2.1
+project=NeCTAR-RC/gnocchi.git
+defaultbranch=nectar/2.1
