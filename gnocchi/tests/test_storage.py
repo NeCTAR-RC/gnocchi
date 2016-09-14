@@ -114,6 +114,9 @@ class TestStorageDriver(tests_base.TestCase):
 
     @mock.patch('gnocchi.carbonara.AggregatedTimeSerie.POINTS_PER_SPLIT', 48)
     def test_add_measures_update_subset_split(self):
+        if not isinstance(self.storage, _carbonara.CarbonaraBasedStorage):
+            self.skipTest("This driver is not based on Carbonara")
+
         m, m_sql = self._create_metric('medium')
         measures = [
             storage.Measure(datetime.datetime(2014, 1, 6, i, j, 0), 100)
@@ -155,6 +158,9 @@ class TestStorageDriver(tests_base.TestCase):
                     new_point, args[1].granularity * 10e8))
 
     def test_delete_old_measures(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
+
         self.storage.add_measures(self.metric, [
             storage.Measure(datetime.datetime(2014, 1, 1, 12, 0, 1), 69),
             storage.Measure(datetime.datetime(2014, 1, 1, 12, 7, 31), 42),
