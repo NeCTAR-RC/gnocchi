@@ -345,6 +345,16 @@ class TestCase(BaseTestCase):
         self.conf.set_override("s3_bucket_prefix", str(uuid.uuid4())[:26],
                                "storage")
 
+        if self.conf.storage.driver == 'influxdb':
+            db_name = 'gnocchitest%s' % \
+                      str(uuid.uuid4()).encode('ascii').replace('-', '')
+            self.conf.set_override('influxdb_database',
+                                   db_name,
+                                   'storage')
+            self.conf.set_override('influxdb_disable_retention_policies',
+                                   True,
+                                   'storage')
+
         self.storage = storage.get_driver(self.conf)
 
         if self.conf.storage.driver == 'redis':
@@ -357,4 +367,6 @@ class TestCase(BaseTestCase):
     def tearDown(self):
         self.index.disconnect()
         self.storage.stop()
+        if self.conf.storage.driver == 'influxdb':
+            self.storage.drop_db()
         super(TestCase, self).tearDown()

@@ -296,6 +296,8 @@ class ArchivePoliciesController(rest.RestController):
         except indexer.ArchivePolicyAlreadyExists as e:
             abort(409, e)
 
+        pecan.request.storage.setup_archive_policies()
+
         location = "/archive_policy/" + ap.name
         set_resp_location_hdr(location)
         pecan.response.status = 201

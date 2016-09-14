@@ -141,6 +141,14 @@ def to_timespan(value):
     return datetime.timedelta(seconds=seconds)
 
 
+class Retry(Exception):
+    pass
+
+
+def retry_if_retry_is_raised(exception):
+    return isinstance(exception, Retry)
+
+
 def utcnow():
     """Version of utcnow() that returns utcnow with a correct TZ."""
     return datetime.datetime.now(tz=iso8601.iso8601.UTC)
