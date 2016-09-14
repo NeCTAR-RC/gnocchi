@@ -438,6 +438,16 @@ class TestCase(base.BaseTestCase):
                                    tempdir.path,
                                    'storage')
 
+        if self.conf.storage.driver == 'influxdb':
+            db_name = 'gnocchitest%s' % \
+                      str(uuid.uuid4()).encode('ascii').replace('-', '')
+            self.conf.set_override('influxdb_database',
+                                   db_name,
+                                   'storage')
+            self.conf.set_override('influxdb_disable_retention_policies',
+                                   True,
+                                   'storage')
+
         self.storage = storage.get_driver(self.conf)
         # NOTE(jd) Do not upgrade the storage. We don't really need the storage
         # upgrade for now, and the code that upgrade from pre-1.3
@@ -453,4 +463,6 @@ class TestCase(base.BaseTestCase):
     def tearDown(self):
         self.index.disconnect()
         self.storage.stop()
+        if self.conf.storage.driver == 'influxdb':
+            self.storage.drop_db()
         super(TestCase, self).tearDown()
