@@ -37,6 +37,9 @@ do
                        pifpaf -e GNOCCHI_INDEXER run $indexer -- \
                        ./tools/pretty_tox.sh $*
                 ;;
+            influxdb)
+                ./tools/setup-influxdb-env.sh pifpaf -e GNOCCHI_STORAGE run $storage -- pifpaf -e GNOCCHI_INDEXER run $indexer -- ./tools/pretty_tox.sh $*
+                ;;
             *)
                 pifpaf -g GNOCCHI_INDEXER_URL run $indexer -- ./tools/pretty_tox.sh $*
                 ;;

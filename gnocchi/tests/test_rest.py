@@ -403,6 +403,8 @@ class MetricTest(RestTest):
                 status=403)
 
     def test_add_measures_back_window(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         ap_name = str(uuid.uuid4())
         with self.app.use_admin_user():
             self.app.post_json(
@@ -1634,6 +1636,8 @@ class ResourceTest(RestTest):
             sorted(result.json['description']['detail']))
 
     def test_get_res_named_metric_measure_aggregation_nooverlap(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver doesn't currently handle overlap")
         result = self.app.post_json("/v1/metric",
                                     params={"archive_policy_name": "medium"})
         metric1 = json.loads(result.text)

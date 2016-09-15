@@ -45,6 +45,8 @@ class TestStatsd(tests_base.TestCase):
                                self.STATSD_USER_ID, "statsd")
         self.conf.set_override("archive_policy_name",
                                self.STATSD_ARCHIVE_POLICY_NAME, "statsd")
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver doesn't work with statsd tests")
         ap = self.ARCHIVE_POLICIES["medium"]
         self.aggregations = ap.get_aggregations_for_method("mean")
 
