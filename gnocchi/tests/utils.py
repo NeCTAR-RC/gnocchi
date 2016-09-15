@@ -15,5 +15,8 @@ import six
 
 
 def list_all_incoming_metrics(incoming):
-    return set.union(*[incoming.list_metric_with_measures_to_process(i)
-                       for i in six.moves.range(incoming.NUM_SACKS)])
+    if incoming.NUM_SACKS > 0:
+        return set.union(*[incoming.list_metric_with_measures_to_process(i)
+                           for i in six.moves.range(incoming.NUM_SACKS)])
+    else:
+        return set([])
