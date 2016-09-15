@@ -39,6 +39,8 @@ class TestStatsd(tests_base.TestCase):
                                self.STATSD_USER_ID, "statsd")
         self.conf.set_override("archive_policy_name",
                                self.STATSD_ARCHIVE_POLICY_NAME, "statsd")
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver doesn't work with statsd tests")
 
         self.stats = statsd.Stats(self.conf)
         # Replace storage/indexer with correct ones that have been upgraded
