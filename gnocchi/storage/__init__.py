@@ -174,6 +174,15 @@ class StorageDriver(object):
     def upgrade(self, num_sacks):
         self.incoming.upgrade(num_sacks)
 
+    def setup_archive_policy(self, ap, reset=False):
+        """Setup the archive policy on the storage backend.
+
+        :param ap: The archive policy to setup
+        :param reset: If True, then data for this archive policy
+                      will be dropped (required for some backends)
+        """
+        pass
+
     def process_background_tasks(self, index, metrics, sync=False):
         """Process background tasks for this storage.
 
