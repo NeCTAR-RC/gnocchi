@@ -136,6 +136,15 @@ class StorageDriver(object):
     def _get_measures_unbatched(metric, timestamp_key, aggregation, version=3):
         raise NotImplementedError
 
+    def setup_archive_policy(self, ap, reset=False):
+        """Setup the archive policy on the storage backend.
+
+        :param ap: The archive policy to setup
+        :param reset: If True, then data for this archive policy
+                      will be dropped (required for some backends)
+        """
+        pass
+
     @staticmethod
     def _get_unaggregated_timeserie(metric, version=3):
         raise NotImplementedError

@@ -290,9 +290,11 @@ class ArchivePolicyController(rest.RestController):
             abort(400, six.text_type(e))
 
         try:
-            return pecan.request.indexer.update_archive_policy(
+            ap_result = pecan.request.indexer.update_archive_policy(
                 self.archive_policy, ap_items)
-        except indexer.UnsupportedArchivePolicyChange as e:
+            pecan.request.storage.setup_archive_policy(ap_result, reset=True)
+            return ap_result
+
             abort(400, six.text_type(e))
 
     @pecan.expose()
@@ -346,6 +348,8 @@ class ArchivePoliciesController(rest.RestController):
             ap = pecan.request.indexer.create_archive_policy(ap)
         except indexer.ArchivePolicyAlreadyExists as e:
             abort(409, six.text_type(e))
+
+        pecan.request.storage.setup_archive_policy(ap)
 
         location = "/archive_policy/" + ap.name
         set_resp_location_hdr(location)
