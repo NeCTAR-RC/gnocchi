@@ -388,7 +388,7 @@ class MetricTest(RestTest):
                 status=403)
 
     def test_add_measures_back_window(self):
-        ap_name = str(uuid.uuid4())
+        ap_name = str(uuid.uuid4()).replace('-', '')
         with self.app.use_admin_user():
             self.app.post_json(
                 "/v1/archive_policy",
