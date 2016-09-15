@@ -347,6 +347,19 @@ class TestCase(BaseTestCase):
                     stdout=f, stderr=subprocess.STDOUT)
             self.conf.set_override('ceph_pool', pool_name, 'storage')
 
+        if self.conf.storage.driver == 'influxdb':
+            db_name = 'gnocchitest%s' % uuid.uuid4().hex
+            self.conf.set_override('influxdb_database',
+                                   db_name,
+                                   'storage')
+            self.conf.set_override('influxdb_port',
+                                   os.getenv("GNOCCHI_STORAGE_INFLUXDB_PORT",
+                                             "8086"),
+                                   'storage')
+            self.conf.set_override('influxdb_disable_retention_policies',
+                                   True,
+                                   'storage')
+
         # Override the bucket prefix to be unique to avoid concurrent access
         # with any other test
         self.conf.set_override("s3_bucket_prefix", str(uuid.uuid4())[:26],
@@ -362,11 +375,15 @@ class TestCase(BaseTestCase):
         if self.conf.incoming.driver == 'redis':
             self.incoming.SACK_PREFIX = str(uuid.uuid4())
 
+        if self.conf.storage.driver == 'influxdb':
+            self.storage._create_database()
         self.storage.upgrade()
         self.incoming.upgrade(128)
 
     def tearDown(self):
         self.index.disconnect()
+        if self.conf.storage.driver == 'influxdb':
+            self.storage._drop_database()
         super(TestCase, self).tearDown()
 
     @classmethod

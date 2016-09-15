@@ -96,6 +96,8 @@ class TestStorageDriver(tests_base.TestCase):
                        numpy.timedelta64(5, 'm'), 1), m)
 
     def test_aborted_initial_processing(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         self.incoming.add_measures(self.metric.id, [
             incoming.Measure(datetime64(2014, 1, 1, 12, 0, 1), 5),
         ])
@@ -125,6 +127,8 @@ class TestStorageDriver(tests_base.TestCase):
                        numpy.timedelta64(5, 'm'), 5.0), m)
 
     def test_list_metric_with_measures_to_process(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         metrics = tests_utils.list_all_incoming_metrics(self.incoming)
         self.assertEqual(set(), metrics)
         self.incoming.add_measures(self.metric.id, [
@@ -137,6 +141,8 @@ class TestStorageDriver(tests_base.TestCase):
         self.assertEqual(set([]), metrics)
 
     def test_delete_nonempty_metric(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         self.incoming.add_measures(self.metric.id, [
             incoming.Measure(datetime64(2014, 1, 1, 12, 0, 1), 69),
         ])
@@ -153,6 +159,8 @@ class TestStorageDriver(tests_base.TestCase):
                           self.metric)
 
     def test_delete_nonempty_metric_unprocessed(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         self.incoming.add_measures(self.metric.id, [
             incoming.Measure(datetime64(2014, 1, 1, 12, 0, 1), 69),
         ])
@@ -190,6 +198,8 @@ class TestStorageDriver(tests_base.TestCase):
         self.assertNotIn('details', report)
 
     def test_measures_reporting(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         m2, __ = self._create_metric('medium')
         for i in six.moves.range(60):
             self.incoming.add_measures(self.metric.id, [
@@ -224,6 +234,8 @@ class TestStorageDriver(tests_base.TestCase):
 
     @mock.patch('gnocchi.carbonara.SplitKey.POINTS_PER_SPLIT', 48)
     def test_add_measures_update_subset_split(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         m, m_sql = self._create_metric('medium')
         measures = [
             incoming.Measure(datetime64(2014, 1, 6, i, j, 0), 100)
@@ -268,6 +280,8 @@ class TestStorageDriver(tests_base.TestCase):
                     new_point, args[1].granularity * 10e8))
 
     def test_delete_old_measures(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         self.incoming.add_measures(self.metric.id, [
             incoming.Measure(datetime64(2014, 1, 1, 12, 0, 1), 69),
             incoming.Measure(datetime64(2014, 1, 1, 12, 7, 31), 42),
@@ -319,6 +333,8 @@ class TestStorageDriver(tests_base.TestCase):
             self.metric, "mean", numpy.timedelta64(5, 'm')))
 
     def test_rewrite_measures(self):
+        if not isinstance(self.storage, _carbonara.CarbonaraBasedStorage):
+            self.skipTest("This driver is not based on Carbonara")
         # Create an archive policy that spans on several splits. Each split
         # being 3600 points, let's go for 36k points so we have 10 splits.
         apname = str(uuid.uuid4())
@@ -441,6 +457,8 @@ class TestStorageDriver(tests_base.TestCase):
             granularities=[numpy.timedelta64(1, 'm')]))
 
     def test_rewrite_measures_oldest_mutable_timestamp_eq_next_key(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         """See LP#1655422"""
         # Create an archive policy that spans on several splits. Each split
         # being 3600 points, let's go for 36k points so we have 10 splits.
@@ -565,6 +583,8 @@ class TestStorageDriver(tests_base.TestCase):
             granularities=[numpy.timedelta64(60, 's')]))
 
     def test_rewrite_measures_corruption_missing_file(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         # Create an archive policy that spans on several splits. Each split
         # being 3600 points, let's go for 36k points so we have 10 splits.
         apname = str(uuid.uuid4())
@@ -651,6 +671,8 @@ class TestStorageDriver(tests_base.TestCase):
         self.trigger_processing()
 
     def test_rewrite_measures_corruption_bad_data(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver handles retention differently")
         # Create an archive policy that spans on several splits. Each split
         # being 3600 points, let's go for 36k points so we have 10 splits.
         apname = str(uuid.uuid4())
@@ -956,6 +978,7 @@ class TestStorageDriver(tests_base.TestCase):
         name = str(uuid.uuid4())
         ap = archive_policy.ArchivePolicy(name, 0, [(3, 5)])
         self.index.create_archive_policy(ap)
+        self.storage.setup_archive_policy(ap=ap)
         m = self.index.create_metric(uuid.uuid4(), str(uuid.uuid4()), name)
         m = self.index.list_metrics(attribute_filter={"=": {"id": m.id}})[0]
         self.incoming.add_measures(m.id, [
@@ -970,8 +993,9 @@ class TestStorageDriver(tests_base.TestCase):
             (datetime64(2014, 1, 1, 12, 0, 10), numpy.timedelta64(5, 's'), 1),
         ], self.storage.get_measures(m, [numpy.timedelta64(5, 's')]))
         # expand to more points
-        self.index.update_archive_policy(
+        ap = self.index.update_archive_policy(
             name, [archive_policy.ArchivePolicyItem(granularity=5, points=6)])
+        self.storage.setup_archive_policy(ap=ap, reset=True)
         m = self.index.list_metrics(attribute_filter={"=": {"id": m.id}})[0]
         self.incoming.add_measures(m.id, [
             incoming.Measure(datetime64(2014, 1, 1, 12, 0, 15), 1),
@@ -984,8 +1008,9 @@ class TestStorageDriver(tests_base.TestCase):
             (datetime64(2014, 1, 1, 12, 0, 15), numpy.timedelta64(5, 's'), 1),
         ], self.storage.get_measures(m, [numpy.timedelta64(5, 's')]))
         # shrink timespan
-        self.index.update_archive_policy(
+        ap = self.index.update_archive_policy(
             name, [archive_policy.ArchivePolicyItem(granularity=5, points=2)])
+        self.storage.setup_archive_policy(ap=ap, reset=True)
         m = self.index.list_metrics(attribute_filter={"=": {"id": m.id}})[0]
         self.assertEqual([
             (datetime64(2014, 1, 1, 12, 0, 10), numpy.timedelta64(5, 's'), 1),
