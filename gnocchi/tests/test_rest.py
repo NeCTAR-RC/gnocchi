@@ -323,8 +323,8 @@ class MetricTest(RestTest):
 
     def test_add_measures_back_window(self):
         if self.conf.storage.driver == 'influxdb':
-            self.skipTest("InfluxDB retention policy works differently")
-        ap_name = str(uuid.uuid4()).replace('-', '')
+            self.skipTest("Influxdb driver handles retention differently")
+        ap_name = str(uuid.uuid4())
         with self.app.use_admin_user():
             self.app.post_json(
                 "/v1/archive_policy",

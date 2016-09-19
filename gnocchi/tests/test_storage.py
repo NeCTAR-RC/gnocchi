@@ -159,7 +159,7 @@ class TestStorageDriver(tests_base.TestCase):
 
     def test_delete_old_measures(self):
         if self.conf.storage.driver == 'influxdb':
-            self.skipTest("N/A for influxdb driver")
+            self.skipTest("Influxdb driver handles retention differently")
 
         self.storage.add_measures(self.metric, [
             storage.Measure(datetime.datetime(2014, 1, 1, 12, 0, 1), 69),
