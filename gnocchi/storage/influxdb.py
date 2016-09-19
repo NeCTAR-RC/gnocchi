@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import datetime
 import logging
 import operator
+import re
 
 try:
     import influxdb
@@ -92,7 +93,7 @@ class InfluxDBStorage(storage.StorageDriver):
                                               conf.influxdb_database)
         self.database = conf.influxdb_database
         self.conf = conf._conf
-        self.raw_data_measurment = 'samples'
+        self.measurement_prefix = 'samples'
         if conf.influxdb_auto_create_db:
             self.create_db()
         self.setup_archive_policies()
@@ -105,8 +106,9 @@ class InfluxDBStorage(storage.StorageDriver):
             self.setup_archive_policy(ap)
 
     def setup_archive_policy(self, ap, reset=False):
-        start_measure = self.raw_data_measurment
+        start_measure = self._get_ap_measurement(ap)
         start_retention = self.conf.storage.influxdb_default_retention_policy
+        ap_name = self._sanitize_cq_name(ap.name)
         for aggregation in ap.aggregation_methods:
             aggregation_method = self._get_aggregation_method(aggregation)
             for rule in sorted(ap.definition, key=lambda k: k['granularity']):
@@ -126,7 +128,7 @@ class InfluxDBStorage(storage.StorageDriver):
                                                     duration=retention,
                                                     replication=1)
                 granularity = int(rule['granularity'])
-                measure = 'samples_%s_%s_%s' % (ap.name, aggregation,
+                measure = 'samples_%s_%s_%s' % (ap_name, aggregation,
                                                 granularity)
                 if reset:
                     try:
@@ -155,7 +157,7 @@ class InfluxDBStorage(storage.StorageDriver):
                     # Already exists so ignore
                     pass
         if reset:
-            self.backfill_data()
+            self.backfill_data(ap=ap)
 
     def create_db(self):
         self.influx.create_database(self.database)
@@ -171,34 +173,44 @@ class InfluxDBStorage(storage.StorageDriver):
         else:
             return '%s(value)' % aggregation
 
-    def backfill_data(self):
+    def _get_ap_measurement(self, ap):
+        return "%s_%s" % (self.measurement_prefix,
+                          self._sanitize_cq_name(ap.name))
+
+    @staticmethod
+    def _sanitize_cq_name(name):
+        return name.replace('-', '')
+
+    def backfill_data(self, ap):
+        measurement = self._get_ap_measurement(ap)
         result = self.influx.query(
-            "SELECT * FROM %s ORDER BY time ASC LIMIT 1" %
-            self.raw_data_measurment)
+            "SELECT * FROM %s ORDER BY time ASC LIMIT 1" % measurement)
         if not result:
             return
-        start_time = list(result[self.raw_data_measurment])[0]['time']
-        result = self.influx.query('SHOW CONTINUOUS QUERIES')
-        cqs = list(result[self.database])
+        start_time = list(result[measurement])[0]['time']
+        cq_result = self.influx.query('SHOW CONTINUOUS QUERIES')
+        cqs = list(cq_result[self.database])
+        
         for cq in cqs:
-            query_begin = cq['query'].find('BEGIN') + 6
-            query_end = cq['query'].find('END') - 1
-            query = cq['query'][query_begin:query_end].replace(
-                'GROUP', "WHERE time >= '%s' GROUP" % start_time)
-            self.influx.query(query)
+            items = re.search(
+                '.*BEGIN\s(?P<query>.*)\s(?P<query_end>GROUP BY.*)END.*',
+                cq['query']).groupdict()
+            cq_name = cq['name']
+            if measurement and cq_name.startswith(measurement):
+                query = items.get('query') + " WHERE time >= '%s' " % \
+                        start_time + items.get('query_end')
+                self.influx.query(query)
 
     def process_background_tasks(self, index, metrics, sync=True):
         # This is here solely for running tests and in normal operation
         # is never called.
-        self.backfill_data()
+        archive_policies = index.list_archive_policies()
+        for ap in archive_policies:
+            self.backfill_data(ap)
 
     @staticmethod
     def _get_metric_id(metric):
         return str(metric.id)
-
-    def _metric_exists(self, metric):
-        list_series = [s['name'] for s in self.influx.get_list_series()]
-        return self._get_metric_id(metric) in list_series
 
     def _query(self, metric, query):
         try:
@@ -218,7 +230,7 @@ class InfluxDBStorage(storage.StorageDriver):
 
     @retrying.retry(stop_max_delay=5000, wait_fixed=500,
                     retry_on_exception=utils.retry_if_retry_is_raised)
-    def _wait_points_exists(self, metric_id, where):
+    def _wait_points_exists(self, measurement, metric_id, where):
         # NOTE(sileht): influxdb query returns even the data is not yet insert
         # in the asked series, the work is done in an async fashion, so a
         # immediate get_measures after an add_measures will not returns the
@@ -232,7 +244,7 @@ class InfluxDBStorage(storage.StorageDriver):
                                        "WHERE metric_id=\"%(metric_id)s\" AND "
                                        "%(where)s LIMIT 1" %
                                        dict(
-                                           measurment=self.raw_data_measurment,
+                                           measurment=measurement,
                                            metric_id=metric_id,
                                            where=where),
                                        database=self.database)
@@ -251,7 +263,8 @@ class InfluxDBStorage(storage.StorageDriver):
 
     def add_measures(self, metric, measures):
         metric_id = self._get_metric_id(metric)
-        points = [dict(measurement=self.raw_data_measurment,
+        measurement = self._get_ap_measurement(metric.archive_policy)
+        points = [dict(measurement=measurement,
                        time=self._timestamp_to_utc(m.timestamp).isoformat(),
                        fields=dict(value=float(m.value)),
                        tags=dict(metric_id=metric_id))
@@ -260,8 +273,8 @@ class InfluxDBStorage(storage.StorageDriver):
                                  database=self.database,
                                  retention_policy="autogen")
 
-        self._wait_points_exists(metric_id, "time = '%(time)s' AND "
-                                 "value = %(value)s" %
+        self._wait_points_exists(metric_id, measurement,
+                                 "time = '%(time)s' AND value = %(value)s" %
                                  dict(time=points[-1]['time'],
                                       value=points[-1]["fields"]["value"]))
 
@@ -295,7 +308,8 @@ class InfluxDBStorage(storage.StorageDriver):
             if time_query:
                 time_query = " AND " + time_query
             measure = "samples_%(ap_name)s_%(aggregation)s_%(granularity)d" % \
-                      dict(ap_name=metric.archive_policy.name,
+                      dict(ap_name=self._sanitize_cq_name(
+                          metric.archive_policy.name),
                            aggregation=aggregation,
                            granularity=definition.granularity)
 

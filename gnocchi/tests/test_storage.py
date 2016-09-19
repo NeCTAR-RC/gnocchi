@@ -211,7 +211,7 @@ class TestStorageDriver(tests_base.TestCase):
 
     def test_delete_old_measures(self):
         if self.conf.storage.driver == 'influxdb':
-            self.skipTest("N/A for influxdb driver")
+            self.skipTest("Influxdb driver handles retention differently")
 
         self.storage.add_measures(self.metric, [
             storage.Measure(utils.dt_to_unix_ns(2014, 1, 1, 12, 0, 1), 69),
@@ -694,7 +694,7 @@ class TestStorageDriver(tests_base.TestCase):
                     {u"≠": 50}]}))
 
     def test_resize_policy(self):
-        name = str(uuid.uuid4()).replace('-', '')
+        name = str(uuid.uuid4())
         ap = archive_policy.ArchivePolicy(name, 0, [(3, 5)])
         self.index.create_archive_policy(ap)
         self.storage.setup_archive_policy(ap=ap)
