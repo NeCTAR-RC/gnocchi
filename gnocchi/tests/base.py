@@ -277,6 +277,10 @@ class TestCase(base.BaseTestCase):
             self.conf.set_override('influxdb_database',
                                    db_name,
                                    'storage')
+            self.conf.set_override('influxdb_port',
+                                   os.getenv("GNOCCHI_STORAGE_INFLUXDB_PORT",
+                                             "8086"),
+                                   'storage')
             self.conf.set_override('influxdb_disable_retention_policies',
                                    True,
                                    'storage')
