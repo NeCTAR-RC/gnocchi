@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 from __future__ import absolute_import
+import collections
 import datetime
 import logging
 import operator
@@ -90,7 +91,9 @@ class InfluxDBStorage(storage.StorageDriver):
                                               conf.influxdb_port,
                                               conf.influxdb_username,
                                               conf.influxdb_password,
-                                              conf.influxdb_database)
+                                              conf.influxdb_database,
+                                              use_udp=True,
+                                              udp_port=4444)
         self.database = conf.influxdb_database
         self.conf = conf._conf
         self.measurement_prefix = 'samples'
@@ -181,13 +184,31 @@ class InfluxDBStorage(storage.StorageDriver):
     def _sanitize_cq_name(name):
         return name.replace('-', '')
 
+    def earliest_time(self, measurement, rp=None, metrics=[]):
+        where = ""
+        if metrics:
+            metrics_or = " OR ".join(["metric_id = '%s'" % self._get_metric_id(metric) for metric in metrics])
+            where = "WHERE " + metrics_or
+        if rp:
+            measurement_select = "%s.%s" % (rp, measurement)
+        else:
+            measurement_select = measurement
+        query = "SELECT * FROM %s %s ORDER BY time ASC LIMIT 1" % (measurement_select, where)
+        LOG.debug(query)
+        result = self.influx.query(query)
+        if not result:
+            return None
+        return list(result[measurement])[0]['time']
+    
     def backfill_data(self, ap):
         measurement = self._get_ap_measurement(ap)
         result = self.influx.query(
             "SELECT * FROM %s ORDER BY time ASC LIMIT 1" % measurement)
         if not result:
             return
-        start_time = list(result[measurement])[0]['time']
+        start_time = self.earliest_time(measurement)
+        if not start_time:
+            return
         cq_result = self.influx.query('SHOW CONTINUOUS QUERIES')
         cqs = list(cq_result[self.database])
 
@@ -265,13 +286,14 @@ class InfluxDBStorage(storage.StorageDriver):
         metric_id = self._get_metric_id(metric)
         measurement = self._get_ap_measurement(metric.archive_policy)
         points = [dict(measurement=measurement,
-                       time=self._timestamp_to_utc(m.timestamp).isoformat(),
+                       time=self._timestamp_to_utc(m.timestamp).isoformat(),#.strftime('%Y-%m-%dT%H:%M:%S'),#isoformat(),
                        fields=dict(value=float(m.value)),
                        tags=dict(metric_id=metric_id))
                   for m in measures]
-        self.influx.write_points(points=points, time_precision='n',
+        self.influx.write_points(points=points, time_precision='s',
                                  database=self.database,
                                  retention_policy="autogen")
+        #self.backfill_data(metric.archive_policy)
 
         self._wait_points_exists(metric_id, measurement,
                                  "time = '%(time)s' AND value = %(value)s" %
@@ -389,7 +411,81 @@ class InfluxDBStorage(storage.StorageDriver):
         super(InfluxDBStorage, self).get_cross_metric_measures(
             metrics, from_timestamp, to_timestamp, aggregation,
             granularity, needed_overlap)
-        raise exceptions.NotImplementedError
+
+        if reaggregation is None:
+            reaggregation = aggregation 
+
+        archive_policies = set([metric.archive_policy.name for metric in metrics ])
+        if len(archive_policies) != 1:
+            raise storage.MetricUnaggregatable(
+                                metrics, 'No granularity match')
+
+        archive_policy = metrics[0].archive_policy
+        results = []
+        defs = sorted(
+            (d
+             for d in archive_policy.definition
+             if granularity is None or granularity == d.granularity),
+            key=operator.attrgetter('granularity'), reverse=True)
+
+        if not defs:
+            raise storage.GranularityDoesNotExist(metric[0], granularity)
+        for definition in defs:
+            rp = "rp_%s" % int(definition.timespan)
+            measure = "samples_%(ap_name)s_%(aggregation)s_%(granularity)d" % \
+                      dict(ap_name=self._sanitize_cq_name(
+                          archive_policy.name),
+                           aggregation=aggregation,
+                           granularity=definition.granularity)
+
+            earliest_time = None
+            if not from_timestamp:
+                earliest_time = self.earliest_time(measure, rp, metrics)
+                if not earliest_time:
+                    continue
+                earliest_time = self._timestamp_to_utc(
+                    timeutils.parse_isotime(earliest_time))
+                LOG.debug("No from timestamp using %s" % earliest_time)
+            else:
+                earliest_time = from_timestamp
+            time_query = self._make_time_query(
+                earliest_time,
+                to_timestamp,
+                definition.granularity)
+            if time_query:
+                time_query = " AND " + time_query
+
+            i_aggregation = self._get_aggregation_method(reaggregation)
+            metrics_or = " OR ".join(["metric_id = '%s'" % self._get_metric_id(metric) for metric in metrics])
+            subquery = ("SELECT %(i_aggregation)s FROM "
+                        "%(database)s.%(rp)s.%(measure)s WHERE "
+                        "%(metrics)s %(times)s GROUP BY time(%(granularity)ds) fill(none) "
+                        "ORDER BY time DESC LIMIT %(points)d"
+                        % dict(database=self.database,
+                               rp=rp,
+                               measure=measure,
+                               aggregation=aggregation,
+                               i_aggregation=i_aggregation,
+                               metrics=metrics_or,
+                               times=time_query,
+                               granularity=definition.granularity,
+                               points=definition.points))
+
+            LOG.debug(subquery)
+            result = self._query(metric, subquery)
+            
+            subresults = []
+            for point in result[measure]:
+                timestamp = self._timestamp_to_utc(
+                    timeutils.parse_isotime(point['time']))
+                if point[reaggregation] is not None:
+                    subresults.insert(0, (timestamp,
+                                          definition.granularity,
+                                          point[reaggregation]))
+            results.extend(subresults)
+
+        return list(results)
+
 
     def _add_measures(self, aggregation, archive_policy_def,
                       metric, timeserie):
