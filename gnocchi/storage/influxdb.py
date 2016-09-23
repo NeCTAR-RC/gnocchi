@@ -14,7 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 from __future__ import absolute_import
-import collections
 import datetime
 import logging
 import operator
@@ -29,7 +28,6 @@ from oslo_config import cfg
 from oslo_utils import timeutils
 import retrying
 
-from gnocchi import exceptions
 from gnocchi import indexer
 from gnocchi import storage
 from gnocchi import utils
@@ -187,19 +185,22 @@ class InfluxDBStorage(storage.StorageDriver):
     def earliest_time(self, measurement, rp=None, metrics=[]):
         where = ""
         if metrics:
-            metrics_or = " OR ".join(["metric_id = '%s'" % self._get_metric_id(metric) for metric in metrics])
+            metrics_or = " OR ".join(
+                ["metric_id = '%s'" % self._get_metric_id(metric)
+                 for metric in metrics])
             where = "WHERE " + metrics_or
         if rp:
             measurement_select = "%s.%s" % (rp, measurement)
         else:
             measurement_select = measurement
-        query = "SELECT * FROM %s %s ORDER BY time ASC LIMIT 1" % (measurement_select, where)
+        query = "SELECT * FROM %s %s ORDER BY time ASC LIMIT 1" % (
+            measurement_select, where)
         LOG.debug(query)
         result = self.influx.query(query)
         if not result:
             return None
         return list(result[measurement])[0]['time']
-    
+
     def backfill_data(self, ap):
         measurement = self._get_ap_measurement(ap)
         result = self.influx.query(
@@ -211,7 +212,7 @@ class InfluxDBStorage(storage.StorageDriver):
             return
         cq_result = self.influx.query('SHOW CONTINUOUS QUERIES')
         cqs = list(cq_result[self.database])
-        
+
         for cq in cqs:
             items = re.search(
                 '.*BEGIN\s(?P<query>.*)\s(?P<query_end>GROUP BY.*)END.*',
@@ -219,7 +220,7 @@ class InfluxDBStorage(storage.StorageDriver):
             cq_name = cq['name']
             if measurement and cq_name.startswith(measurement):
                 query = items.get('query') + " WHERE time >= '%s' " % \
-                        start_time + items.get('query_end')
+                    start_time + items.get('query_end')
                 self.influx.query(query)
 
     def process_background_tasks(self, index, metrics, sync=True):
@@ -286,14 +287,13 @@ class InfluxDBStorage(storage.StorageDriver):
         metric_id = self._get_metric_id(metric)
         measurement = self._get_ap_measurement(metric.archive_policy)
         points = [dict(measurement=measurement,
-                       time=self._timestamp_to_utc(m.timestamp).isoformat(),#.strftime('%Y-%m-%dT%H:%M:%S'),#isoformat(),
+                       time=self._timestamp_to_utc(m.timestamp).isoformat(),
                        fields=dict(value=float(m.value)),
                        tags=dict(metric_id=metric_id))
                   for m in measures]
+        rp = self.conf.storage.influxdb_default_retention_policy
         self.influx.write_points(points=points, time_precision='s',
-                                 database=self.database,
-                                 retention_policy="autogen")
-        #self.backfill_data(metric.archive_policy)
+                                 database=self.database, retention_policy=rp)
 
         self._wait_points_exists(metric_id, measurement,
                                  "time = '%(time)s' AND value = %(value)s" %
@@ -329,27 +329,26 @@ class InfluxDBStorage(storage.StorageDriver):
                 definition.granularity)
             if time_query:
                 time_query = " AND " + time_query
+            ap_name = self._sanitize_cq_name(metric.archive_policy.name)
             measure = "samples_%(ap_name)s_%(aggregation)s_%(granularity)d" % \
-                      dict(ap_name=self._sanitize_cq_name(
-                          metric.archive_policy.name),
-                           aggregation=aggregation,
+                      dict(ap_name=ap_name, aggregation=aggregation,
                            granularity=definition.granularity)
 
             rp = "rp_%s" % int(definition.timespan)
 
-            subquery = ("SELECT value as %(aggregation)s FROM "
-                        "%(database)s.%(rp)s.%(measure)s WHERE "
-                        "metric_id='%(metric_id)s' %(times)s fill(none) "
-                        "ORDER BY time DESC LIMIT %(points)d"
-                        % dict(database=self.database,
-                               rp=rp,
-                               measure=measure,
-                               aggregation=aggregation,
-                               metric_id=metric_id,
-                               times=time_query,
-                               points=definition.points))
+            query = ("SELECT value as %(aggregation)s FROM "
+                     "%(database)s.%(rp)s.%(measure)s WHERE "
+                     "metric_id='%(metric_id)s' %(times)s fill(none) "
+                     "ORDER BY time DESC LIMIT %(points)d"
+                     % dict(database=self.database,
+                            rp=rp,
+                            measure=measure,
+                            aggregation=aggregation,
+                            metric_id=metric_id,
+                            times=time_query,
+                            points=definition.points))
 
-            result = self._query(metric, subquery)
+            result = self._query(metric, query)
 
             subresults = []
             for point in result[measure]:
@@ -414,12 +413,12 @@ class InfluxDBStorage(storage.StorageDriver):
             granularity, needed_overlap)
 
         if reaggregation is None:
-            reaggregation = aggregation 
+            reaggregation = aggregation
 
-        archive_policies = set([metric.archive_policy.name for metric in metrics ])
+        archive_policies = set(
+            [metric.archive_policy.name for metric in metrics])
         if len(archive_policies) != 1:
-            raise storage.MetricUnaggregatable(
-                                metrics, 'No granularity match')
+            raise storage.MetricUnaggregatable(metrics, 'No granularity match')
 
         archive_policy = metrics[0].archive_policy
         results = []
@@ -431,12 +430,12 @@ class InfluxDBStorage(storage.StorageDriver):
 
         if not defs:
             raise storage.GranularityDoesNotExist(metric[0], granularity)
+
         for definition in defs:
             rp = "rp_%s" % int(definition.timespan)
+            ap_name = self._sanitize_cq_name(archive_policy.name)
             measure = "samples_%(ap_name)s_%(aggregation)s_%(granularity)d" % \
-                      dict(ap_name=self._sanitize_cq_name(
-                          archive_policy.name),
-                           aggregation=aggregation,
+                      dict(ap_name=ap_name, aggregation=aggregation,
                            granularity=definition.granularity)
 
             earliest_time = None
@@ -446,7 +445,6 @@ class InfluxDBStorage(storage.StorageDriver):
                     continue
                 earliest_time = self._timestamp_to_utc(
                     timeutils.parse_isotime(earliest_time))
-                LOG.debug("No from timestamp using %s" % earliest_time)
             else:
                 earliest_time = from_timestamp
             time_query = self._make_time_query(
@@ -457,24 +455,26 @@ class InfluxDBStorage(storage.StorageDriver):
                 time_query = " AND " + time_query
 
             i_aggregation = self._get_aggregation_method(reaggregation)
-            metrics_or = " OR ".join(["metric_id = '%s'" % self._get_metric_id(metric) for metric in metrics])
-            subquery = ("SELECT %(i_aggregation)s FROM "
-                        "%(database)s.%(rp)s.%(measure)s WHERE "
-                        "%(metrics)s %(times)s GROUP BY time(%(granularity)ds) fill(none) "
-                        "ORDER BY time DESC LIMIT %(points)d"
-                        % dict(database=self.database,
-                               rp=rp,
-                               measure=measure,
-                               aggregation=aggregation,
-                               i_aggregation=i_aggregation,
-                               metrics=metrics_or,
-                               times=time_query,
-                               granularity=definition.granularity,
-                               points=definition.points))
+            metrics_or = " OR ".join(
+                ["metric_id = '%s'" % self._get_metric_id(metric)
+                 for metric in metrics])
+            query = ("SELECT %(i_aggregation)s FROM "
+                     "%(database)s.%(rp)s.%(measure)s WHERE "
+                     "%(metrics)s %(times)s GROUP BY time(%(granularity)ds) "
+                     "fill(none) ORDER BY time DESC LIMIT %(points)d"
+                     % dict(database=self.database,
+                            rp=rp,
+                            measure=measure,
+                            aggregation=aggregation,
+                            i_aggregation=i_aggregation,
+                            metrics=metrics_or,
+                            times=time_query,
+                            granularity=definition.granularity,
+                            points=definition.points))
 
-            LOG.debug(subquery)
-            result = self._query(metric, subquery)
-            
+            LOG.debug(query)
+            result = self._query(metric, query)
+
             subresults = []
             for point in result[measure]:
                 timestamp = self._timestamp_to_utc(
@@ -486,7 +486,6 @@ class InfluxDBStorage(storage.StorageDriver):
             results.extend(subresults)
 
         return list(results)
-
 
     def _add_measures(self, aggregation, archive_policy_def,
                       metric, timeserie):
