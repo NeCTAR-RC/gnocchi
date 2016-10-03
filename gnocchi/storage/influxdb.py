@@ -404,13 +404,15 @@ class InfluxDBStorage(storage.StorageDriver):
 
     def get_cross_metric_measures(self, metrics, from_timestamp=None,
                                   to_timestamp=None, aggregation='mean',
+                                  reaggregation=None,
                                   granularity=None,
                                   needed_overlap=100.0):
         super(InfluxDBStorage, self).get_cross_metric_measures(
             metrics, from_timestamp, to_timestamp, aggregation,
-            granularity, needed_overlap)
+            reaggregation, granularity, needed_overlap)
 
-        reaggregation = aggregation
+        if not reaggregation:
+            reaggregation = aggregation
 
         archive_policies = set([metric.archive_policy.name
                                 for metric in metrics])
@@ -457,8 +459,8 @@ class InfluxDBStorage(storage.StorageDriver):
                                       self._get_metric_id(metric)
                                       for metric in metrics])
             subquery = ("SELECT %(i_aggregation)s FROM "
-                        "%(database)s.%(rp)s.%(measure)s WHERE "
-                        "%(metrics)s %(times)s GROUP BY time(%(granularity)ds) "
+                        "%(database)s.%(rp)s.%(measure)s WHERE %(metrics)s "
+                        "%(times)s GROUP BY time(%(granularity)ds) "
                         "fill(none) ORDER BY time DESC LIMIT %(points)d"
                         % dict(database=self.database,
                                rp=rp,
