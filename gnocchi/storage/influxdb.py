@@ -406,11 +406,12 @@ class InfluxDBStorage(storage.StorageDriver):
 
     def get_cross_metric_measures(self, metrics, from_timestamp=None,
                                   to_timestamp=None, aggregation='mean',
+                                  reaggregation=None,
                                   granularity=None,
                                   needed_overlap=100.0):
         super(InfluxDBStorage, self).get_cross_metric_measures(
             metrics, from_timestamp, to_timestamp, aggregation,
-            granularity, needed_overlap)
+            reaggregation, granularity, needed_overlap)
 
         if reaggregation is None:
             reaggregation = aggregation 
