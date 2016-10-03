@@ -120,7 +120,7 @@ class InfluxDBStorage(storage.StorageDriver):
                     retention = 'INF'
                 elif retention < 3600:
                     # Can't have a retention policy < 1 hour in influxDB
-                    retention = 3600
+                    retention = "%ss" % 3600
                 else:
                     retention = "%ss" % retention
 
