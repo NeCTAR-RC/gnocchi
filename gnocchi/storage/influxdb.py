@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import datetime
 import logging
 import operator
+import Queue
 import re
 
 try:
@@ -64,6 +65,9 @@ OPTS = [
                 help='InfluxDB disable retention policies, '
                 'essentially setting all retention policies to '
                 'infinity'),
+    cfg.IntOpt('influxdb_batch_size',
+               default=0,
+               help='InfluxDB batch size to spool points'),
 ]
 
 
@@ -96,6 +100,8 @@ class InfluxDBStorage(storage.StorageDriver):
         if conf.influxdb_auto_create_db:
             self.create_db()
         self.setup_archive_policies()
+        self.spool_size = conf.influxdb_batch_size
+        self.queue = Queue.Queue(self.spool_size * 10)
 
     def setup_archive_policies(self):
         index = indexer.get_driver(self.conf)
@@ -281,6 +287,35 @@ class InfluxDBStorage(storage.StorageDriver):
         metric_id = self._get_metric_id(metric)
         self._query(metric, "DROP MEASUREMENT \"%s\"" % metric_id)
 
+    def send_meters(self, meters):
+        overflow = False
+        for meter in meters:
+            self._maybe_flush()
+            try:
+                self.queue.put_nowait(meter)
+            except Queue.Full:
+                overflow = True
+            if overflow:
+                LOG.warning('Failed to record metering data: '
+                            'meter spool full.')
+
+    def _maybe_flush(self):
+        if self.queue.qsize() >= self.spool_size:
+            self._flush()
+
+    def _flush(self):
+        meters = []
+        while len(meters) < self.spool_size:
+            try:
+                meters.append(self.queue.get_nowait())
+            except Queue.Empty:
+                break
+        LOG.debug("Forwarding %s meters" % len(meters))
+        rp = self.conf.storage.influxdb_default_retention_policy
+        self.influx.write_points(
+            points=meters, time_precision='n', database=self.database,
+            retention_policy=rp)
+
     def add_measures(self, metric, measures):
         metric_id = self._get_metric_id(metric)
         measurement = self._get_ap_measurement(metric.archive_policy)
@@ -289,14 +324,20 @@ class InfluxDBStorage(storage.StorageDriver):
                        fields=dict(value=float(m.value)),
                        tags=dict(metric_id=metric_id))
                   for m in measures]
-        self.influx.write_points(points=points, time_precision='n',
-                                 database=self.database,
-                                 retention_policy="autogen")
 
-        self._wait_points_exists(metric_id, measurement,
-                                 "time = '%(time)s' AND value = %(value)s" %
-                                 dict(time=points[-1]['time'],
-                                      value=points[-1]["fields"]["value"]))
+        if self.spool_size > 0:
+            self.send_meters(points)
+        else:
+            rp = self.conf.storage.influxdb_default_retention_policy
+            self.influx.write_points(points=points, time_precision='n',
+                                     database=self.database,
+                                     retention_policy=rp)
+
+            self._wait_points_exists(
+                metric_id, measurement,
+                "time = '%(time)s' AND value = %(value)s" %
+                dict(time=points[-1]['time'],
+                     value=points[-1]["fields"]["value"]))
 
     def get_measures(self, metric, from_timestamp=None, to_timestamp=None,
                      aggregation='mean', granularity=None):
