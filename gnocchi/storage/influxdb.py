@@ -19,6 +19,7 @@ import datetime
 import logging
 import operator
 import re
+import Queue
 
 try:
     import influxdb
@@ -66,6 +67,9 @@ OPTS = [
                 help='InfluxDB disable retention policies, '
                 'essentially setting all retention policies to '
                 'infinity'),
+    cfg.IntOpt('influxdb_batch_size',
+                default=0,
+                help='InfluxDB batch size to spool points'),
 ]
 
 
@@ -91,15 +95,15 @@ class InfluxDBStorage(storage.StorageDriver):
                                               conf.influxdb_port,
                                               conf.influxdb_username,
                                               conf.influxdb_password,
-                                              conf.influxdb_database,
-                                              use_udp=True,
-                                              udp_port=4444)
+                                              conf.influxdb_database)
         self.database = conf.influxdb_database
         self.conf = conf._conf
         self.measurement_prefix = 'samples'
         if conf.influxdb_auto_create_db:
             self.create_db()
         self.setup_archive_policies()
+        self.spool_size = conf.influxdb_batch_size
+        self.queue = Queue.Queue(self.spool_size * 10)
 
     def setup_archive_policies(self):
         index = indexer.get_driver(self.conf)
@@ -282,23 +286,53 @@ class InfluxDBStorage(storage.StorageDriver):
         metric_id = self._get_metric_id(metric)
         self._query(metric, "DROP MEASUREMENT \"%s\"" % metric_id)
 
+    def send_meters(self, meters):
+        overflow = False
+        for meter in meters:
+            self._maybe_flush()
+            try:
+                self.queue.put_nowait(meter)
+            except Queue.Full:
+                overflow = True
+            if overflow:
+                LOG.warning('Failed to record metering data: '
+                            'meter spool full.')
+
+    def _maybe_flush(self):
+        if self.queue.qsize() >= self.spool_size:
+            self._flush()
+
+    def _flush(self):
+        meters = []
+        while len(meters) < self.spool_size:
+            try:
+                meters.append(self.queue.get_nowait())
+            except Queue.Empty:
+                break
+        LOG.debug("Forwarding %s meters" % len(meters))
+        self.influx.write_points(
+            points=meters, time_precision='n', database=self.database,
+            retention_policy=self.conf.storage.influxdb_default_retention_policy)
+
     def add_measures(self, metric, measures):
         metric_id = self._get_metric_id(metric)
         measurement = self._get_ap_measurement(metric.archive_policy)
         points = [dict(measurement=measurement,
-                       time=self._timestamp_to_utc(m.timestamp).isoformat(),#.strftime('%Y-%m-%dT%H:%M:%S'),#isoformat(),
+                       time=self._timestamp_to_utc(m.timestamp).isoformat(),
                        fields=dict(value=float(m.value)),
                        tags=dict(metric_id=metric_id))
                   for m in measures]
-        self.influx.write_points(points=points, time_precision='s',
-                                 database=self.database,
-                                 retention_policy="autogen")
-        #self.backfill_data(metric.archive_policy)
+        if self.spool_size > 0:
+            self.send_meters(points)
+        else:
+            self.influx.write_points(
+                points=points, time_precision='n', database=self.database,
+                retention_policy=self.conf.storage.influxdb_default_retention_policy)
 
-        self._wait_points_exists(metric_id, measurement,
-                                 "time = '%(time)s' AND value = %(value)s" %
-                                 dict(time=points[-1]['time'],
-                                      value=points[-1]["fields"]["value"]))
+            self._wait_points_exists(metric_id, measurement,
+                                     "time = '%(time)s' AND value = %(value)s" %
+                                     dict(time=points[-1]['time'],
+                                          value=points[-1]["fields"]["value"]))
 
     def get_measures(self, metric, from_timestamp=None, to_timestamp=None,
                      aggregation='mean', granularity=None):
