@@ -445,7 +445,7 @@ class CarbonaraBasedStorage(storage.StorageDriver):
                                   needed_overlap=100.0):
         super(CarbonaraBasedStorage, self).get_cross_metric_measures(
             metrics, from_timestamp, to_timestamp,
-            aggregation, granularity, needed_overlap)
+            aggregation, reaggregation, granularity, needed_overlap)
 
         if granularity is None:
             granularities = (

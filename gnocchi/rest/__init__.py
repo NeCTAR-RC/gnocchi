@@ -383,10 +383,10 @@ class AggregatedMetricController(rest.RestController):
 
     @pecan.expose('json')
     def get_measures(self, start=None, stop=None, aggregation='mean',
-                     granularity=None, needed_overlap=100.0):
+                     reaggregation=None, granularity=None, needed_overlap=100.0):
         return self.get_cross_metric_measures_from_ids(
             self.metric_ids, start, stop,
-            aggregation, granularity, needed_overlap)
+            aggregation, reaggregation, granularity, needed_overlap)
 
     @classmethod
     def get_cross_metric_measures_from_ids(cls, metric_ids, start=None,
@@ -458,8 +458,7 @@ class AggregatedMetricController(rest.RestController):
             else:
                 measures = pecan.request.storage.get_cross_metric_measures(
                     metrics, start, stop, aggregation, reaggregation,
-                    granularity,
-                    needed_overlap)
+                    granularity, needed_overlap)
             # Replace timestamp keys by their string versions
             return [(timestamp.isoformat(), offset, v)
                     for timestamp, offset, v in measures]
@@ -1303,8 +1302,7 @@ class AggregationResourceController(rest.RestController):
 
     @pecan.expose('json')
     def post(self, start=None, stop=None, aggregation='mean',
-             reaggregation=None,
-             granularity=None, needed_overlap=100.0,
+             reaggregation=None, granularity=None, needed_overlap=100.0,
              groupby=None):
         # First, set groupby in the right format: a sorted list of unique
         # strings.
