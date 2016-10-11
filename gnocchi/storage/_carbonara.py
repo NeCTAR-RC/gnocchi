@@ -441,7 +441,7 @@ class CarbonaraBasedStorage(storage.StorageDriver):
 
     def get_cross_metric_measures(self, metrics, from_timestamp=None,
                                   to_timestamp=None, aggregation='mean',
-                                  granularity=None,
+                                  reaggregation=None, granularity=None,
                                   needed_overlap=100.0):
         super(CarbonaraBasedStorage, self).get_cross_metric_measures(
             metrics, from_timestamp, to_timestamp,
