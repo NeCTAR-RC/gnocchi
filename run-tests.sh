@@ -23,7 +23,7 @@ do
                    pifpaf -e GNOCCHI_INDEXER run $indexer -- \
                    ./tools/pretty_tox.sh $*
 
-        elif [ "$GNOCCHI_TEST_STORAGE_DRIVER" == "s3" ]
+        elif [ "$GNOCCHI_TEST_STORAGE_DRIVER" == "influxdb" ]
             then
                 pifpaf -e GNOCCHI_STORAGE run $storage -- pifpaf -e GNOCCHI_INDEXER run $indexer -- ./tools/pretty_tox.sh $*
         else

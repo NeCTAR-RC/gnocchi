@@ -250,8 +250,7 @@ class InfluxDBStorage(storage.StorageDriver):
                 return {self._get_metric_id(metric): []}
             raise
 
-    @retrying.retry(stop_max_delay=5000, wait_fixed=500,
-                    retry_on_exception=utils.retry_if_retry_is_raised)
+    @utils.retry
     def _wait_points_exists(self, measurement, metric_id, where):
         # NOTE(sileht): influxdb query returns even the data is not yet insert
         # in the asked series, the work is done in an async fashion, so a
