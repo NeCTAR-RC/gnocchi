@@ -1,0 +1,5 @@
+gnocchi/rest/policy.json	/usr/share/gnocchi-common
+gnocchi/rest/api-paste.ini /usr/share/gnocchi-common
+gnocchi/rest/app.wsgi /usr/share/gnocchi-common
+usr/bin/gnocchi-upgrade
+usr/bin/gnocchi-config-generator

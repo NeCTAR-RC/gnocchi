@@ -1,0 +1,187 @@
+Source: gnocchi
+Section: net
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
+Uploaders: Thomas Goirand <zigo@debian.org>,
+Build-Depends: debhelper (>= 9),
+               dh-python,
+               openstack-pkg-tools (>= 52~),
+               python-all,
+               python-pbr,
+               python-setuptools,
+               python-sphinx,
+Build-Depends-Indep: alembic (>= 0.7.6),
+                     python-concurrent.futures (>= 2.1.6),
+                     python-cotyledon (>= 1.2.2),
+                     python-coverage (>= 3.6),
+                     python-doc8,
+                     python-fixtures,
+                     python-future (>= 0.15),
+                     python-gabbi (>= 1.21),
+                     python-iso8601,
+                     python-jsonpatch (>= 1.9),
+                     python-keystoneclient (>= 1:1.6.0),
+                     python-keystonemiddleware (>= 4.0.0),
+                     python-lz4,
+                     python-mock,
+                     python-msgpack,
+                     python-mysqldb,
+                     python-numpy,
+                     python-os-testr,
+                     python-oslo.config (>= 1:2.6.0),
+                     python-oslo.db (>= 4.8.0),
+                     python-oslo.log (>= 2.3.0),
+                     python-oslo.middleware (>= 3.11.0),
+                     python-oslo.policy (>= 0.3.0),
+                     python-oslo.serialization (>= 1.4.0),
+                     python-oslo.utils (>= 3.3.0),
+                     python-oslosphinx (>= 2.2.0.0),
+                     python-oslotest,
+                     python-pandas (>= 0.17.0),
+                     python-paste,
+                     python-pastedeploy,
+                     python-pecan (>= 0.9),
+                     python-prettytable,
+                     python-psycopg2,
+                     python-pymysql,
+                     python-pytimeparse (>= 1.1.5),
+                     python-requests,
+                     python-retrying,
+                     python-scipy,
+                     python-ujson,
+                     python-six,
+                     python-sphinx-bootstrap-theme,
+                     python-sphinxcontrib.httpdomain,
+                     python-sqlalchemy,
+                     python-sqlalchemy-utils,
+                     python-stevedore,
+                     python-swiftclient (>= 3.1.0),
+                     python-sysv-ipc,
+                     python-testresources,
+                     python-testscenarios,
+                     python-testtools (>= 0.9.38),
+                     python-tooz (>= 1.38),
+                     python-trollius,
+                     python-voluptuous,
+                     python-webob (>= 1.4.1),
+                     python-webtest (>= 2.0.16),
+                     python-werkzeug,
+                     python-yaml,
+                     subunit (>= 0.0.18),
+                     testrepository
+Standards-Version: 3.9.8
+Vcs-Browser: https://git.launchpad.net/~ubuntu-server-dev/ubuntu/+source/gnocchi
+Vcs-Git: git://git.launchpad.net/~ubuntu-server-dev/ubuntu/+source/gnocchi
+Homepage: https://github.com/openstack/gnocchi
+XS-Testsuite: autopkgtest
+
+Package: python-gnocchi
+Section: python
+Architecture: all
+Depends: alembic (>= 0.7.6),
+         python-concurrent.futures (>= 2.1.6),
+         python-cotyledon (>= 1.2.2),
+         python-future (>= 0.15),
+         python-iso8601,
+         python-jsonpatch (>= 1.9),
+         python-keystoneclient (>= 1:1.6.0),
+         python-keystonemiddleware (>= 4.0.0),
+         python-lz4,
+         python-msgpack,
+         python-numpy,
+         python-oslo.config (>= 1:2.6.0),
+         python-oslo.db (>= 4.8.0),
+         python-oslo.log (>= 2.3.0),
+         python-oslo.middleware (>= 3.11.0),
+         python-oslo.policy (>= 0.3.0),
+         python-oslo.serialization (>= 1.4.0),
+         python-oslo.utils (>= 3.3.0),
+         python-oslosphinx (>= 2.2.0.0),
+         python-pandas (>= 0.17.0),
+         python-paste,
+         python-pastedeploy,
+         python-pbr,
+         python-scipy,
+         python-ujson,
+         python-pecan (>= 0.9),
+         python-prettytable,
+         python-psycopg2,
+         python-pymysql,
+         python-pytimeparse (>= 1.1.5),
+         python-requests,
+         python-retrying,
+         python-six,
+         python-sqlalchemy,
+         python-sqlalchemy-utils,
+         python-stevedore,
+         python-swiftclient (>= 3.1.0),
+         python-tooz (>= 1.38),
+         python-trollius,
+         python-voluptuous,
+         python-webob (>= 1.4.1),
+         python-werkzeug,
+         python-yaml,
+         ${misc:Depends},
+         ${python:Depends}
+Suggests: python-gnocchi-doc,
+Description: Metric as a Service - Python 2.x
+ Gnocchi is a service for managing a set of resources and storing metrics about
+ them, in a scalable and resilient way. Its functionalities are exposed over an
+ HTTP REST API.
+ .
+ This package contains the Python 2.x module.
+
+Package: gnocchi-common
+Architecture: all
+Depends: adduser,
+         dbconfig-common,
+         debconf,
+         python-gnocchi (= ${binary:Version}),
+         ${misc:Depends},
+         ${python:Depends}
+Description: Metric as a Service - common files
+ Gnocchi is a service for managing a set of resources and storing metrics about
+ them, in a scalable and resilient way. Its functionalities are exposed over an
+ HTTP REST API.
+ .
+ This package contains the common files.
+
+Package: gnocchi-api
+Architecture: all
+Depends: adduser,
+         gnocchi-common (= ${binary:Version}),
+         python-openstackclient,
+         q-text-as-data,
+         ${misc:Depends},
+         ${python:Depends}
+Description: Metric as a Service - API daemon
+ Gnocchi is a service for managing a set of resources and storing metrics about
+ them, in a scalable and resilient way. Its functionalities are exposed over an
+ HTTP REST API.
+ .
+ This package contains the API server.
+
+Package: gnocchi-metricd
+Architecture: all
+Depends: gnocchi-common (= ${binary:Version}),
+         ${misc:Depends},
+         ${python:Depends}
+Description: Metric as a Service - metric daemon
+ Gnocchi is a service for managing a set of resources and storing metrics about
+ them, in a scalable and resilient way. Its functionalities are exposed over an
+ HTTP REST API.
+ .
+ This package contains the metric daemon.
+
+Package: gnocchi-statsd
+Architecture: all
+Depends: gnocchi-common (= ${binary:Version}),
+         ${misc:Depends},
+         ${python:Depends}
+Description: Metric as a Service - statsd daemon
+ Gnocchi is a service for managing a set of resources and storing metrics about
+ them, in a scalable and resilient way. Its functionalities are exposed over an
+ HTTP REST API.
+ .
+ This package contains the metric daemon.

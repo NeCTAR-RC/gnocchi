@@ -1,0 +1,4 @@
+Tests: gnocchi-daemons python-gnocchi
+Depends: gnocchi-statsd, gnocchi-metricd, gnocchi-api, gnocchi-common,
+ python-gnocchi
+Restrictions: needs-root
