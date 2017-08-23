@@ -53,6 +53,9 @@ OPTS = [
                 help='InfluxDB disable retention policies, '
                 'essentially setting all retention policies to '
                 'infinity'),
+    cfg.IntOpt('influxdb_batch_size',
+               default=0,
+               help='InfluxDB batch size to spool points'),
 ]
 
 
