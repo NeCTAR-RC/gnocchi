@@ -22,7 +22,7 @@ except ImportError:
     influxdb = None
 
 
-MEASUREMENT_PREFIX = 'measures'
+MEASUREMENT_PREFIX = 'samples'
 
 
 def get_connection(conf):
