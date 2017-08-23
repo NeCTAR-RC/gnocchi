@@ -15,6 +15,7 @@
 # under the License.
 
 import daiquiri
+import Queue
 
 from gnocchi.storage.common import influxdb as influxdb_common
 from gnocchi.storage import incoming
@@ -32,10 +33,50 @@ class InfluxDBStorage(incoming.StorageDriver):
         super(InfluxDBStorage, self).__init__(conf)
         self.influx = influxdb_common.get_connection(conf)
         self.database = conf.influxdb_database
+        self.spool_size = conf.influxdb_batch_size
+        self.spool_queues = {}
 
     @staticmethod
     def upgrade():
         pass
+
+    def _get_queue(self, retention_policy):
+        if retention_policy not in self.spool_queues:
+            self.spool_queues[retention_policy] = Queue.Queue(
+                self.spool_size * 10)
+            LOG.debug("Created spool queue for %s", retention_policy)
+        return self.spool_queues[retention_policy]
+
+    def _batch_points(self, retention_policy, points):
+        overflow = False
+        queue = self._get_queue(retention_policy)
+        for point in points:
+            self._maybe_flush(retention_policy, queue)
+            try:
+                queue.put_nowait(point)
+            except Queue.Full:
+                overflow = True
+            if overflow:
+                LOG.watning('Failed to record metering data: '
+                            'meter spool is full.')
+
+    def _maybe_flush(self, retention_policy, queue):
+        LOG.debug('Queue size %s/%s', queue.qsize(), self.spool_size)
+        if queue.qsize() >= self.spool_size:
+            self._flush(retention_policy, queue)
+
+    def _flush(self, retention_policy, queue):
+        points = []
+        while len(points) < self.spool_size:
+            try:
+                points.append(queue.get_nowait())
+            except Queue.Empty:
+                break
+        LOG.debug("Sending %s points", len(points))
+        self.influx.write_points(points=points,
+                                 time_precision='n',
+                                 database=self.database,
+                                 retention_policy=retention_policy)
 
     def _get_incoming_measurement(self, ap):
         return "%s_%s" % (influxdb_common.MEASUREMENT_PREFIX,
@@ -70,10 +111,13 @@ class InfluxDBStorage(incoming.StorageDriver):
                            tags=dict(metric_id=str(metric.id)))
                       for m in measures]
             rp = self._get_incoming_rp_name(ap_name)
-            self.influx.write_points(points=points,
-                                     time_precision='n',
-                                     database=self.database,
-                                     retention_policy=rp)
+            if self.spool_size > 0:
+                self._batch_points(rp, points)
+            else:
+                self.influx.write_points(points=points,
+                                         time_precision='n',
+                                         database=self.database,
+                                         retention_policy=rp)
 
     def measures_report(self, details=True):
         """Return a report of pending to process measures.
