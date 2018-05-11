@@ -479,7 +479,7 @@ class MetricController(rest.RestController):
         measures = deserialize_and_validate(MeasuresListSchema,
                                             detailed_exc=True)
         if measures:
-            pecan.request.incoming.add_measures(self.metric.id, measures)
+            pecan.request.incoming.add_measures(self.metric, measures)
         pecan.response.status = 202
 
     @pecan.expose('json')
@@ -1662,7 +1662,7 @@ class ResourcesMetricsMeasuresBatchController(rest.RestController):
             enforce("post measures", metric)
 
         pecan.request.incoming.add_measures_batch(
-            dict((metric.id,
+            dict((metric,
                  body_by_rid[metric.resource_id][metric.name]["measures"])
                  for metric in known_metrics))
 
@@ -1695,7 +1695,7 @@ class MetricsMeasuresBatchController(rest.RestController):
             enforce("post measures", metric)
 
         pecan.request.incoming.add_measures_batch(
-            dict((metric.id, body[metric.id]) for metric in
+            dict((metric, body[metric.id]) for metric in
                  metrics))
 
         pecan.response.status = 202
@@ -2154,7 +2154,7 @@ class PrometheusWriteController(rest.RestController):
                 enforce("post measures", metric)
 
             measures_to_batch.update(
-                dict((metric.id, measures[metric.name]) for metric in
+                dict((metric, measures[metric.name]) for metric in
                      metrics if metric.name in measures))
 
         pecan.request.incoming.add_measures_batch(measures_to_batch)
