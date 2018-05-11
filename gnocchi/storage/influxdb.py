@@ -174,7 +174,7 @@ class InfluxDBStorage(storage.StorageDriver):
         return "%s_%s_%s_%s" % (influxdb_common.MEASUREMENT_PREFIX,
                                 self._sanitize_ap_name(ap.name),
                                 aggregation,
-                                int(granularity) / 10e8)
+                                int(int(granularity) / 10e8))
 
     @staticmethod
     def _sanitize_ap_name(name):
@@ -310,7 +310,7 @@ class InfluxDBStorage(storage.StorageDriver):
             measure = self._get_measurement_name(metric.archive_policy,
                                                  aggregation,
                                                  definition.granularity)
-            rp = "rp_%s" % (int(definition.timespan) / 10e8)
+            rp = "rp_%s" % int((int(definition.timespan) / 10e8))
 
             query = ("SELECT value as \"%(aggregation)s\" FROM "
                      "%(database)s.%(rp)s.%(measure)s WHERE "
