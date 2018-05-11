@@ -15,29 +15,31 @@
 # under the License.
 
 import daiquiri
+import datetime
 import Queue
 
+from gnocchi import incoming
+from gnocchi import utils
 from gnocchi.storage.common import influxdb as influxdb_common
-from gnocchi.storage import incoming
 
 
 LOG = daiquiri.getLogger(__name__)
 
 
-class InfluxDBStorage(incoming.StorageDriver):
+class InfluxDBStorage(incoming.IncomingDriver):
 
     # Needed to mimic cabonara driver
     NUM_SACKS = 0
 
-    def __init__(self, conf):
-        super(InfluxDBStorage, self).__init__(conf)
+    def __init__(self, conf, greedy=True):
+        super(InfluxDBStorage, self).__init__(conf, greedy)
         self.influx = influxdb_common.get_connection(conf)
         self.database = conf.influxdb_database
         self.spool_size = conf.influxdb_batch_size
         self.spool_queues = {}
 
     @staticmethod
-    def upgrade():
+    def upgrade(sacks=None):
         pass
 
     def _get_queue(self, retention_policy):
@@ -57,7 +59,7 @@ class InfluxDBStorage(incoming.StorageDriver):
             except Queue.Full:
                 overflow = True
             if overflow:
-                LOG.watning('Failed to record metering data: '
+                LOG.warning('Failed to record metering data: '
                             'meter spool is full.')
 
     def _maybe_flush(self, retention_policy, queue):
@@ -106,7 +108,7 @@ class InfluxDBStorage(incoming.StorageDriver):
                 ap_name = metric.archive_policy_name
             measurement = self._get_incoming_measurement(ap_name)
             points = [dict(measurement=measurement,
-                           time=m.timestamp,
+                           time=m.timestamp.astype(datetime.datetime),
                            fields=dict(value=float(m.value)),
                            tags=dict(metric_id=str(metric.id)))
                       for m in measures]

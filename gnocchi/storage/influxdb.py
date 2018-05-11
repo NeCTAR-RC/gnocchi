@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import logging
 import operator
 import re
+import numpy
 
 try:
     import influxdb
@@ -70,13 +71,16 @@ class InfluxDBStorage(storage.StorageDriver):
     "%(database)s"."%(parent_retention)s".%(parent_measure)s GROUP BY
     time(%(granularity)ss), metric_id END"""
 
-    def __init__(self, conf, incoming, coord=None):
-        super(InfluxDBStorage, self).__init__(conf, incoming, coord)
+    def __init__(self, conf, coord=None):
+        super(InfluxDBStorage, self).__init__(conf, coord)
         self.influx = influxdb_common.get_connection(conf)
         self.database = conf.influxdb_database
         self.influxdb_disable_retention_policies = \
             conf.influxdb_disable_retention_policies
         self.conf = conf
+
+    def __str__(self):
+        return "%s: %s" % (self.__class__.__name__, str(self.database))
 
     def setup_archive_policy(self, ap, reset=False):
         incoming_measure = self._get_incoming_measurement(ap)
@@ -170,7 +174,7 @@ class InfluxDBStorage(storage.StorageDriver):
         return "%s_%s_%s_%s" % (influxdb_common.MEASUREMENT_PREFIX,
                                 self._sanitize_ap_name(ap.name),
                                 aggregation,
-                                int(granularity))
+                                int(granularity) / 10e8)
 
     @staticmethod
     def _sanitize_ap_name(name):
@@ -269,10 +273,18 @@ class InfluxDBStorage(storage.StorageDriver):
                     # Most likely gone or never downsampled so ignore
                     pass
 
-    def get_measures(self, metric, from_timestamp=None, to_timestamp=None,
-                     aggregation='mean', granularity=None, resample=None):
-        super(InfluxDBStorage, self).get_measures(
-            metric, from_timestamp, to_timestamp, aggregation)
+    def get_measures(self, metric, granularities, from_timestamp=None,
+                     to_timestamp=None, aggregation='mean', resample=None):
+        results = []
+        for g in granularities:
+            results += self._get_measures(metric, g, from_timestamp,
+                                         to_timestamp, aggregation)
+        return results
+
+    def _get_measures(self, metric, granularity, from_timestamp=None,
+                     to_timestamp=None, aggregation='mean', resample=None):
+        if aggregation not in metric.archive_policy.aggregation_methods:
+            return []
 
         metric_id = self._get_metric_id(metric)
 
@@ -284,7 +296,7 @@ class InfluxDBStorage(storage.StorageDriver):
             key=operator.attrgetter('granularity'))
 
         if not defs:
-            raise storage.GranularityDoesNotExist(metric, granularity)
+            raise ValueError("Granularity %s does not exist for %s" % (granularity, metric))
 
         for definition in sorted(defs, key=lambda k: k['granularity'],
                                  reverse=True):
@@ -298,7 +310,7 @@ class InfluxDBStorage(storage.StorageDriver):
             measure = self._get_measurement_name(metric.archive_policy,
                                                  aggregation,
                                                  definition.granularity)
-            rp = "rp_%s" % int(definition.timespan)
+            rp = "rp_%s" % (int(definition.timespan) / 10e8)
 
             query = ("SELECT value as \"%(aggregation)s\" FROM "
                      "%(database)s.%(rp)s.%(measure)s WHERE "
@@ -347,16 +359,15 @@ class InfluxDBStorage(storage.StorageDriver):
 
     def _make_time_query(self, from_timestamp, to_timestamp, granularity):
         if from_timestamp:
-            from_timestamp = self._timestamp_to_utc(carbonara.round_timestamp(
-                from_timestamp, granularity * 10e8))
-
-            left_time = "time >= '%s'" % from_timestamp.isoformat()
+            from_timestamp = carbonara.round_timestamp(
+                from_timestamp, granularity)
+            left_time = "time >= '%sZ'" % from_timestamp
         else:
             left_time = ""
 
         if to_timestamp:
-            to_timestamp = self._timestamp_to_utc(to_timestamp)
-            right_time = to_timestamp.isoformat()
+            to_timestamp = to_timestamp
+            right_time = "%sZ" % to_timestamp
         else:
             right_time = None
         if from_timestamp and to_timestamp:
@@ -367,6 +378,23 @@ class InfluxDBStorage(storage.StorageDriver):
 
         return ("%s" % left_time) + ("time < '%s'" % right_time
                                      if right_time else "")
+
+    def _get_measures_timeserie(self, metric, aggregation,
+                                from_timestamp=None, to_timestamp=None):
+        timeseries = self.get_measures(metric, from_timestamp=from_timestamp,
+                                       to_timestamp=to_timestamp, aggregation=aggregation.method,
+                                       granularities=[aggregation.granularity])
+        times = []
+        values = []
+        if timeseries:
+            for s in timeseries:
+                times.append(numpy.datetime64(s[0]))
+                values.append(s[2])
+
+        return carbonara.AggregatedTimeSerie.from_data(
+            sampling=aggregation.granularity,
+            aggregation_method=aggregation.method,
+            timestamps=times, values=values)
 
     def get_cross_metric_measures(self, metrics, from_timestamp=None,
                                   to_timestamp=None, aggregation='mean',
