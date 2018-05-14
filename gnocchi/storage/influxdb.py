@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 from __future__ import absolute_import
-import logging
+import daiquiri
 import operator
 import re
 import numpy
@@ -60,7 +60,7 @@ OPTS = [
 ]
 
 
-LOG = logging.getLogger(__name__)
+LOG = daiquiri.getLogger(__name__)
 
 
 class InfluxDBStorage(storage.StorageDriver):
