@@ -16,8 +16,11 @@
 
 import daiquiri
 import datetime
-import Queue
-
+try:
+    import queue
+except ImportError:
+    # python2
+    import Queue as queue
 from gnocchi import incoming
 from gnocchi import utils
 from gnocchi.storage.common import influxdb as influxdb_common
@@ -44,7 +47,7 @@ class InfluxDBStorage(incoming.IncomingDriver):
 
     def _get_queue(self, retention_policy):
         if retention_policy not in self.spool_queues:
-            self.spool_queues[retention_policy] = Queue.Queue(
+            self.spool_queues[retention_policy] = queue.Queue(
                 self.spool_size * 10)
             LOG.debug("Created spool queue for %s", retention_policy)
         return self.spool_queues[retention_policy]
@@ -56,7 +59,7 @@ class InfluxDBStorage(incoming.IncomingDriver):
             self._maybe_flush(retention_policy, queue)
             try:
                 queue.put_nowait(point)
-            except Queue.Full:
+            except queue.Full:
                 overflow = True
             if overflow:
                 LOG.warning('Failed to record metering data: '
@@ -72,7 +75,7 @@ class InfluxDBStorage(incoming.IncomingDriver):
         while len(points) < self.spool_size:
             try:
                 points.append(queue.get_nowait())
-            except Queue.Empty:
+            except queue.Empty:
                 break
         LOG.debug("Sending %s points", len(points))
         self.influx.write_points(points=points,
