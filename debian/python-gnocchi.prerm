@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ] ; then
+	update-alternatives --remove gnocchi-api /usr/bin/python2-gnocchi-api
+	update-alternatives --remove gnocchi-change-sack-size /usr/bin/python2-gnocchi-change-sack-size
+	update-alternatives --remove gnocchi-config-generator /usr/bin/python2-gnocchi-config-generator
+	update-alternatives --remove gnocchi-metricd /usr/bin/python2-gnocchi-metricd
+	update-alternatives --remove gnocchi-statsd /usr/bin/python2-gnocchi-statsd
+	update-alternatives --remove gnocchi-upgrade /usr/bin/python2-gnocchi-upgrade
+fi
+
+#DEBHELPER#
+
+exit 0

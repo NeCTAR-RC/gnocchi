@@ -1,0 +1,56 @@
+Index: b/gnocchi/cli/api.py
+===================================================================
+--- a/gnocchi/cli/api.py
++++ b/gnocchi/cli/api.py
+@@ -14,7 +14,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ import copy
+-from distutils import spawn
++import shutil
+ import math
+ import os
+ import sys
+@@ -73,7 +73,7 @@ def api():
+             "No need to pass `--' in gnocchi-api command line anymore, "
+             "please remove")
+ 
+-    uwsgi = spawn.find_executable("uwsgi")
++    uwsgi = shutil.which("uwsgi")
+     if not uwsgi:
+         LOG.error("Unable to find `uwsgi'.\n"
+                   "Be sure it is installed and in $PATH.")
+Index: b/gnocchi/utils.py
+===================================================================
+--- a/gnocchi/utils.py
++++ b/gnocchi/utils.py
+@@ -15,7 +15,6 @@
+ # License for the specific language governing permissions and limitations
+ # under the License.
+ import datetime
+-import distutils.util
+ import errno
+ import itertools
+ import multiprocessing
+@@ -203,10 +202,17 @@ def ensure_paths(paths):
+                 raise
+ 
+ 
+-def strtobool(v):
+-    if isinstance(v, bool):
+-        return v
+-    return bool(distutils.util.strtobool(v))
++def strtobool(val):
++    if isinstance(val, bool):
++        return val
++    # copied from distutils.util ...
++    val = val.lower()
++    if val in ('y', 'yes', 't', 'true', 'on', '1'):
++        return 1
++    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
++        return 0
++    else:
++        raise ValueError("invalid truth value %r" % (val,))
+ 
+ 
+ class StopWatch(object):

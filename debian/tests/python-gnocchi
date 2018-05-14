@@ -1,0 +1,15 @@
+#!/bin/bash
+#-------------------------
+# Testing client utilities
+#-------------------------
+set -e
+
+result=$(python3 `dirname $0`/test_import_gnocchi.py 2>&1)
+if [ "$result" ]; then
+    echo "ERROR: PYTHON-GNOCCHI MODULE CANNOT BE IMPORTED"
+    exit 1
+else
+    echo "OK"
+    exit 0
+fi
+

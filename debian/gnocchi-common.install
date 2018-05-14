@@ -1,0 +1,2 @@
+gnocchi/rest/api-paste.ini /etc/gnocchi
+gnocchi/rest/policy.json /etc/gnocchi

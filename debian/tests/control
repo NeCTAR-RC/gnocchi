@@ -1,0 +1,3 @@
+Tests: gnocchi-daemons python-gnocchi
+Depends: @, crudini, mysql-server, uuid-runtime, memcached
+Restrictions: needs-root, allow-stderr

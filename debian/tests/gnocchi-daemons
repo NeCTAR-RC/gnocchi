@@ -1,0 +1,49 @@
+#!/bin/bash
+#---------------------
+# Testing gnocchi-daemons
+#---------------------
+set -e
+DAEMONS=('apache2' 'gnocchi-statsd' 'gnocchi-metricd')
+
+for daemon in "${DAEMONS[@]}"; do
+    systemctl stop $daemon
+done
+
+ret=0
+
+mysql -u root << EOF
+DROP DATABASE IF EXISTS gnocchi;
+CREATE DATABASE gnocchi;
+GRANT ALL PRIVILEGES ON gnocchi.* TO 'gnocchi'@'localhost' \
+  IDENTIFIED BY 'changeme';
+GRANT ALL PRIVILEGES ON gnocchi.* TO 'gnocchi'@'%' \
+  IDENTIFIED BY 'changeme';
+EOF
+
+crudini --set /etc/gnocchi/gnocchi.conf indexer url "mysql://gnocchi:changeme@localhost/gnocchi"
+crudini --set /etc/gnocchi/gnocchi.conf DEFAULT coordination_url "memcached://127.0.0.1:11211"
+crudini --set /etc/gnocchi/gnocchi.conf statsd resource_id "`uuidgen`"
+
+gnocchi-upgrade
+
+for daemon in "${DAEMONS[@]}"; do
+    systemctl start $daemon
+    TIMEOUT=50
+    while [ "$TIMEOUT" -gt 0 ]; do
+        if systemctl is-active $daemon > /dev/null; then
+            echo "OK"
+            break
+        fi
+        TIMEOUT=$((TIMEOUT - 1))
+        sleep 0.1
+    done
+
+    if [ "$TIMEOUT" -le 0 ]; then
+        echo "ERROR: ${daemon} IS NOT RUNNING"
+        ret=1
+    fi
+done
+
+curl --fail http://localhost:8041
+
+exit $ret

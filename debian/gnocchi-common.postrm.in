@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+#PKGOS-INCLUDE#
+
+if [ "$1" = "purge" ] ; then
+	pkgos_dbc_postrm gnocchi gnocchi-common $@
+
+	rm -fr /etc/gnocchi
+	rm -rf /var/lib/gnocchi /var/log/gnocchi
+fi
+
+#DEBHELPER#
+
+exit 0

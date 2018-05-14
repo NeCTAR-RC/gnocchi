@@ -1,0 +1,59 @@
+#!/usr/bin/make -f
+
+include /usr/share/openstack-pkg-tools/pkgos.make
+
+export PYBUILD_NAME=gnocchi
+
+%:
+	dh $@ --buildsystem=pybuild --with apache2,python2,python3,sphinxdoc
+
+override_dh_auto_install:
+	dh_auto_install -O--buildsystem=pybuild
+	mkdir -p $(CURDIR)/debian/gnocchi-common/usr/share/gnocchi-common
+	PYTHONPATH=$(CURDIR) $(CURDIR)/debian/python3-gnocchi/usr/bin/gnocchi-config-generator \
+		--output-file $(CURDIR)/debian/gnocchi-common/usr/share/gnocchi-common/gnocchi.conf
+	crudini --set $(CURDIR)/debian/gnocchi-common/usr/share/gnocchi-common/gnocchi.conf indexer url sqlite:////var/lib/gnocchi/gnocchidb
+	crudini --set $(CURDIR)/debian/gnocchi-common/usr/share/gnocchi-common/gnocchi.conf keystone_authtoken auth_protocol http
+	/usr/share/openstack-pkg-tools/pkgos_insert_include pkgos_func gnocchi-common.postinst
+	/usr/share/openstack-pkg-tools/pkgos_insert_include pkgos_func gnocchi-common.config
+	/usr/share/openstack-pkg-tools/pkgos_insert_include pkgos_func gnocchi-api.postinst
+	/usr/share/openstack-pkg-tools/pkgos_insert_include pkgos_func gnocchi-api.config
+	/usr/share/openstack-pkg-tools/pkgos_insert_include pkgos_postrm gnocchi-common.postrm
+	pkgos-merge-templates gnocchi-api gnocchi endpoint
+	pkgos-merge-templates gnocchi-common gnocchi db ksat
+	mv $(CURDIR)/debian/python-gnocchi/usr/bin/gnocchi-api $(CURDIR)/debian/python-gnocchi/usr/bin/python2-gnocchi-api
+	mv $(CURDIR)/debian/python3-gnocchi/usr/bin/gnocchi-api $(CURDIR)/debian/python3-gnocchi/usr/bin/python3-gnocchi-api
+	mv $(CURDIR)/debian/python-gnocchi/usr/bin/gnocchi-change-sack-size $(CURDIR)/debian/python-gnocchi/usr/bin/python2-gnocchi-change-sack-size
+	mv $(CURDIR)/debian/python3-gnocchi/usr/bin/gnocchi-change-sack-size $(CURDIR)/debian/python3-gnocchi/usr/bin/python3-gnocchi-change-sack-size
+	mv $(CURDIR)/debian/python-gnocchi/usr/bin/gnocchi-config-generator $(CURDIR)/debian/python-gnocchi/usr/bin/python2-gnocchi-config-generator
+	mv $(CURDIR)/debian/python3-gnocchi/usr/bin/gnocchi-config-generator $(CURDIR)/debian/python3-gnocchi/usr/bin/python3-gnocchi-config-generator
+	mv $(CURDIR)/debian/python-gnocchi/usr/bin/gnocchi-metricd $(CURDIR)/debian/python-gnocchi/usr/bin/python2-gnocchi-metricd
+	mv $(CURDIR)/debian/python3-gnocchi/usr/bin/gnocchi-metricd $(CURDIR)/debian/python3-gnocchi/usr/bin/python3-gnocchi-metricd
+	mv $(CURDIR)/debian/python-gnocchi/usr/bin/gnocchi-statsd $(CURDIR)/debian/python-gnocchi/usr/bin/python2-gnocchi-statsd
+	mv $(CURDIR)/debian/python3-gnocchi/usr/bin/gnocchi-statsd $(CURDIR)/debian/python3-gnocchi/usr/bin/python3-gnocchi-statsd
+	mv $(CURDIR)/debian/python-gnocchi/usr/bin/gnocchi-upgrade $(CURDIR)/debian/python-gnocchi/usr/bin/python2-gnocchi-upgrade
+	mv $(CURDIR)/debian/python3-gnocchi/usr/bin/gnocchi-upgrade $(CURDIR)/debian/python3-gnocchi/usr/bin/python3-gnocchi-upgrade
+
+# NOTE(jamespage):
+# Skip any test execution as all tests are functional tests in gnocchi
+override_dh_auto_test:
+	:
+
+override_dh_sphinxdoc:
+ifeq (,$(findstring nodoc, $(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=. sphinx-build -b html doc/source debian/python-gnocchi-doc/usr/share/doc/python-gnocchi-doc/html ; \
+	dh_sphinxdoc -O--buildsystem=pybuild
+endif
+
+override_dh_clean:
+	dh_clean -O--buildsystem=pybuild
+	rm -rf build debian/gnocchi-common.postinst debian/gnocchi-common.config debian/gnocchi-api.config debian/gnocchi-api.postinst
+	rm -rf debian/CHANGEME-common.postrm debian/*.templates debian/po
+
+# Commands not to run
+override_dh_installcatalogs:
+override_dh_installemacsen override_dh_installifupdown:
+override_dh_installinfo override_dh_installmenu override_dh_installmime:
+override_dh_installmodules override_dh_installpam override_dh_installppp override_dh_installudev override_dh_installwm:
+override_dh_installxfonts override_dh_gconf override_dh_icons override_dh_perl override_dh_usrlocal:
+override_dh_installgsettings:

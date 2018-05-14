@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "configure" ] ; then
+	update-alternatives --install /usr/bin/gnocchi-api gnocchi-api /usr/bin/python3-gnocchi-api 400
+	update-alternatives --install /usr/bin/gnocchi-change-sack-size gnocchi-change-sack-size /usr/bin/python3-gnocchi-change-sack-size 400
+	update-alternatives --install /usr/bin/gnocchi-config-generator gnocchi-config-generator /usr/bin/python3-gnocchi-config-generator 400
+	update-alternatives --install /usr/bin/gnocchi-metricd gnocchi-metricd /usr/bin/python3-gnocchi-metricd 400
+	update-alternatives --install /usr/bin/gnocchi-statsd gnocchi-statsd /usr/bin/python3-gnocchi-statsd 400
+	update-alternatives --install /usr/bin/gnocchi-upgrade gnocchi-upgrade /usr/bin/python3-gnocchi-upgrade 400
+fi
+
+#DEBHELPER#
+
+exit 0
