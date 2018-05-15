@@ -5,7 +5,7 @@ include /usr/share/openstack-pkg-tools/pkgos.make
 export PYBUILD_NAME=gnocchi
 
 %:
-	dh $@ --buildsystem=pybuild --with apache2,python2,python3,sphinxdoc
+	dh $@ --buildsystem=pybuild --with python2,python3,sphinxdoc
 
 override_dh_auto_install:
 	dh_auto_install -O--buildsystem=pybuild
