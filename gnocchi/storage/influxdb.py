@@ -30,7 +30,7 @@ from oslo_utils import timeutils
 from gnocchi import carbonara
 from gnocchi import indexer
 from gnocchi import storage
-from gnocchi.storage.common import influxdb as influxdb_common
+from gnocchi.common import influxdb as influxdb_common
 
 
 OPTS = [
@@ -91,7 +91,7 @@ class InfluxDBStorage(storage.StorageDriver):
             for rule in sorted(ap.definition, key=lambda k: k['granularity']):
 
                 retention = int(rule['timespan'])
-                rp_name = 'rp_%s' % retention
+                rp_name = 'rp_%s' % int(retention / 10e8)
 
                 if self.influxdb_disable_retention_policies:
                     retention = 'INF'
@@ -99,7 +99,7 @@ class InfluxDBStorage(storage.StorageDriver):
                     # Can't have a retention policy < 1 hour in influxDB
                     retention = '3600s'
                 else:
-                    retention = "%ss" % retention
+                    retention = "%ss" % int(retention / 10e8)
 
                 self.influx.create_retention_policy(name=rp_name,
                                                     duration=retention,
@@ -107,6 +107,7 @@ class InfluxDBStorage(storage.StorageDriver):
                 granularity = int(rule['granularity'])
                 measure = self._get_measurement_name(ap, aggregation,
                                                      granularity)
+                granularity = int(granularity / 10e8)
                 if reset:
                     try:
                         self._query('DROP MEASUREMENT %s' % measure)
@@ -152,7 +153,7 @@ class InfluxDBStorage(storage.StorageDriver):
         index = indexer.get_driver(self.conf._conf)
         archive_policies = index.list_archive_policies()
         for ap in archive_policies:
-            self.setup_archive_policy(ap)
+            self.setup_archive_policy(ap, reset=True)
 
     @staticmethod
     def _get_aggregation_method(aggregation):
@@ -239,6 +240,16 @@ class InfluxDBStorage(storage.StorageDriver):
         archive_policies = index.list_archive_policies()
         for ap in archive_policies:
             self._backfill_data(ap)
+
+    def process_new_measures(self, indexer, incoming, metrics_to_process,
+                             sync=False):
+        pass
+
+    def refresh_metric(self, indexer, incoming, metric, timeout):
+        pass
+
+    def expunge_metrics(self, incoming, index, sync=False):
+        pass
 
     @staticmethod
     def _get_metric_id(metric):
