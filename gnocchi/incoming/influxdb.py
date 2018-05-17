@@ -20,7 +20,7 @@ import Queue
 
 from gnocchi import incoming
 from gnocchi import utils
-from gnocchi.storage.common import influxdb as influxdb_common
+from gnocchi.common import influxdb as influxdb_common
 
 
 LOG = daiquiri.getLogger(__name__)
