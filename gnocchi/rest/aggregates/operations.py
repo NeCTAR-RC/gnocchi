@@ -81,6 +81,8 @@ binary_operators = {
     u"^": numpy.power,
     u"pow": numpy.power,
 
+    u"clip": numpy.clip,
+
 }
 
 # TODO(sileht): adds, numpy.around, but it take a decimal argument to handle
@@ -146,7 +148,10 @@ def handle_binary_operator(nodes, granularity, timestamps,
         timestamps = t1
         granularity = g1
 
-    values = binary_operators[op](v1, v2)
+    if op == 'clip':
+        values = binary_operators[op](v1, a_min=None, a_max=v2)
+    else:
+        values = binary_operators[op](v1, v2)
     return granularity, timestamps, values, is_aggregated
 
 
