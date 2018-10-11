@@ -307,7 +307,7 @@ class InfluxDBStorage(storage.StorageDriver):
             key=operator.attrgetter('granularity'))
 
         if not defs:
-            raise ValueError("Granularity %s does not exist for %s" % (granularity, metric))
+            raise storage.AggregationDoesNotExist(metric, aggregation, granularity)
 
         for definition in sorted(defs, key=lambda k: k['granularity'],
                                  reverse=True):
@@ -434,7 +434,7 @@ class InfluxDBStorage(storage.StorageDriver):
             key=operator.attrgetter('granularity'), reverse=True)
 
         if not defs:
-            raise storage.GranularityDoesNotExist(metric[0], granularity)
+            raise storage.AggregationDoesNotExist(metrics[0], aggregation, granularity)
 
         for definition in defs:
             rp = "rp_%s" % int(definition.timespan)
