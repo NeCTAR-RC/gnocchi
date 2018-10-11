@@ -71,8 +71,8 @@ class InfluxDBStorage(storage.StorageDriver):
     "%(database)s"."%(parent_retention)s".%(parent_measure)s GROUP BY
     time(%(granularity)ss), metric_id END"""
 
-    def __init__(self, conf, coord=None):
-        super(InfluxDBStorage, self).__init__(conf, coord)
+    def __init__(self, conf):
+        super(InfluxDBStorage, self).__init__(conf)
         self.influx = influxdb_common.get_connection(conf)
         self.database = conf.influxdb_database
         self.influxdb_disable_retention_policies = \
