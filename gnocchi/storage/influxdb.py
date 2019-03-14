@@ -65,7 +65,9 @@ LOG = daiquiri.getLogger(__name__)
 
 class InfluxDBStorage(storage.StorageDriver):
 
-    CQ_QUERY = """CREATE CONTINUOUS QUERY %(measure)s ON "%(database)s" BEGIN
+    CQ_QUERY = """CREATE CONTINUOUS QUERY %(measure)s ON "%(database)s" 
+    RESAMPLE FOR %(resample_for)ss
+    BEGIN
     SELECT %(aggregation_method)s AS value INTO
     "%(database)s"."%(retention)s".%(measure)s FROM
     "%(database)s"."%(parent_retention)s".%(parent_measure)s GROUP BY
@@ -88,7 +90,10 @@ class InfluxDBStorage(storage.StorageDriver):
         incoming_rp = self.setup_incoming_rp(ap)
         for aggregation in ap.aggregation_methods:
             aggregation_method = self._get_aggregation_method(aggregation)
-            for rule in sorted(ap.definition, key=lambda k: k['granularity']):
+            parent_measure = None
+            parent_retention = None
+            for index, rule in enumerate(sorted(ap.definition, key=lambda k: k['granularity'])):
+                index += 1
 
                 retention = int(rule['timespan'])
                 rp_name = 'rp_%s' % int(retention / 10e8)
@@ -108,33 +113,47 @@ class InfluxDBStorage(storage.StorageDriver):
                 measure = self._get_measurement_name(ap, aggregation,
                                                      granularity)
                 granularity = int(granularity / 10e8)
+
+                # We resample for 5 mins * the index
+                # This means first rule is resampled after 5 mins
+                # 2nd rule is resampled after 10 mins and so on
+                resample_for = 300 * index
+
                 if reset:
-                    try:
-                        self._query('DROP MEASUREMENT %s' % measure)
-                    except influxdb.exceptions.InfluxDBClientError:
-                        # Already gone so ignore
-                        pass
+                    #try:
+                    #    self._query('DROP MEASUREMENT %s' % measure)
+                    #except influxdb.exceptions.InfluxDBClientError:
+                    #    # Already gone so ignore
+                    #    pass
 
                     self._query('DROP CONTINUOUS QUERY %s ON %s' % (
                         measure, self.database))
 
+                if parent_retention is None:
+                    parent_retention = incoming_rp
+                if parent_measure is None:
+                    parent_measure = incoming_measure
+                    
                 cq_query = self.CQ_QUERY % dict(
                     database=self.database,
                     retention=rp_name,
                     measure=measure,
                     aggregation=aggregation,
                     aggregation_method=aggregation_method,
+                    resample_for=granularity,
                     granularity=granularity,
-                    parent_retention=incoming_rp,
-                    parent_measure=incoming_measure
+                    parent_retention=parent_retention,
+                    parent_measure=parent_measure,
                 )
                 try:
                     self._query(cq_query)
                 except influxdb.exceptions.InfluxDBClientError:
                     # Already exists so ignore
                     pass
-        if reset:
-            self._backfill_data(ap=ap)
+                parent_retention = rp_name
+                parent_measure = measure
+        #if reset:
+        #    self._backfill_data(ap=ap)
 
     def setup_incoming_rp(self, ap):
         # Set up an archive policy for incoming measures
