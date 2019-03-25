@@ -978,6 +978,8 @@ class TestStorageDriver(tests_base.TestCase):
                 numpy.timedelta64(5, 'm')))
 
     def test_resize_policy(self):
+        if self.conf.storage.driver == 'influxdb':
+            self.skipTest("Influxdb driver doesn't support resize")
         name = str(uuid.uuid4())
         ap = archive_policy.ArchivePolicy(name, 0, [(3, 5)])
         self.index.create_archive_policy(ap)
