@@ -27,10 +27,10 @@ from gnocchi import indexer
 from gnocchi import storage
 from gnocchi.storage import ceph
 from gnocchi.storage import file
+from gnocchi.storage import influxdb
 from gnocchi.storage import redis
 from gnocchi.storage import s3
 from gnocchi.storage import swift
-from gnocchi.storage import influxdb
 from gnocchi.tests import base as tests_base
 from gnocchi.tests import utils as tests_utils
 

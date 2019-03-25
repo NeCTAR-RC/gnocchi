@@ -21,9 +21,9 @@ try:
 except ImportError:
     # python2
     import Queue as queue
-from gnocchi import incoming
-from gnocchi import utils
+
 from gnocchi.common import influxdb as influxdb_common
+from gnocchi import incoming
 
 
 LOG = daiquiri.getLogger(__name__)

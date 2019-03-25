@@ -15,9 +15,9 @@
 # under the License.
 from __future__ import absolute_import
 import daiquiri
+import numpy
 import operator
 import re
-import numpy
 
 try:
     import influxdb
@@ -28,9 +28,9 @@ from oslo_config import cfg
 from oslo_utils import timeutils
 
 from gnocchi import carbonara
+from gnocchi.common import influxdb as influxdb_common
 from gnocchi import indexer
 from gnocchi import storage
-from gnocchi.common import influxdb as influxdb_common
 
 
 OPTS = [
@@ -289,11 +289,11 @@ class InfluxDBStorage(storage.StorageDriver):
         results = []
         for g in granularities:
             results += self._get_measures(metric, g, from_timestamp,
-                                         to_timestamp, aggregation)
+                                          to_timestamp, aggregation)
         return results
 
     def _get_measures(self, metric, granularity, from_timestamp=None,
-                     to_timestamp=None, aggregation='mean', resample=None):
+                      to_timestamp=None, aggregation='mean', resample=None):
         if aggregation not in metric.archive_policy.aggregation_methods:
             return []
 
@@ -307,7 +307,8 @@ class InfluxDBStorage(storage.StorageDriver):
             key=operator.attrgetter('granularity'))
 
         if not defs:
-            raise storage.AggregationDoesNotExist(metric, aggregation, granularity)
+            raise storage.AggregationDoesNotExist(metric, aggregation,
+                                                  granularity)
 
         for definition in sorted(defs, key=lambda k: k['granularity'],
                                  reverse=True):
@@ -393,7 +394,8 @@ class InfluxDBStorage(storage.StorageDriver):
     def _get_measures_timeserie(self, metric, aggregation,
                                 from_timestamp=None, to_timestamp=None):
         timeseries = self.get_measures(metric, from_timestamp=from_timestamp,
-                                       to_timestamp=to_timestamp, aggregation=aggregation.method,
+                                       to_timestamp=to_timestamp,
+                                       aggregation=aggregation.method,
                                        granularities=[aggregation.granularity])
         times = []
         values = []
@@ -434,7 +436,8 @@ class InfluxDBStorage(storage.StorageDriver):
             key=operator.attrgetter('granularity'), reverse=True)
 
         if not defs:
-            raise storage.AggregationDoesNotExist(metrics[0], aggregation, granularity)
+            raise storage.AggregationDoesNotExist(metrics[0], aggregation,
+                                                  granularity)
 
         for definition in defs:
             rp = "rp_%s" % int(definition.timespan)
