@@ -244,12 +244,16 @@ class AggregatesController(rest.RestController):
 
             results = []
             for key, resources in itertools.groupby(resources, groupper):
-                results.append({
-                    "group": dict(key),
-                    "measures": self._get_measures_by_name(
-                        resources, references, body["operations"], start, stop,
-                        granularity, needed_overlap, fill, details=details)
-                })
+                try:
+                    results.append({
+                        "group": dict(key),
+                        "measures": self._get_measures_by_name(
+                            resources, references, body["operations"], start,
+                            stop, granularity, needed_overlap, fill,
+                            details=details)
+                    })
+                except Exception:
+                    pass
             return results
 
         else:
