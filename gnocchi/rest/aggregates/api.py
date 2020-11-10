@@ -308,15 +308,15 @@ class AggregatesController(rest.RestController):
                 for m in r.metrics if fnmatch.fnmatch(m.name, wildcard)
             ])
 
-        if not references:
-            api.abort(400, {"cause": "Metrics not found",
-                            "detail": set((m for (m, a) in metric_wildcards))})
+        if references:
+            response = {
+                "measures": get_measures_or_abort(
+                    references, operations, start, stop, granularity,
+                    needed_overlap, fill)
+            }
+        else:
+            response = {"measures": []}
 
-        response = {
-            "measures": get_measures_or_abort(
-                references, operations, start, stop, granularity,
-                needed_overlap, fill)
-        }
         if details:
             response["references"] = set((r.resource for r in references))
         return response
