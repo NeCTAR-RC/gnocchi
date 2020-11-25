@@ -1082,8 +1082,8 @@ class SQLAlchemyIndexer(indexer.IndexerDriver):
             except exception.InvalidSortKey as e:
                 raise indexer.InvalidPagination(e)
 
-            # Always include metrics
-            q = q.options(sqlalchemy.orm.joinedload("metrics"))
+            if details:
+                q = q.options(sqlalchemy.orm.joinedload("metrics"))
             all_resources = q.all()
 
             if details:

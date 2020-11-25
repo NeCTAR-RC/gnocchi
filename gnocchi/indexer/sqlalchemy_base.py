@@ -204,6 +204,8 @@ class ResourceJsonifier(indexer.Resource):
         if 'metrics' not in sqlalchemy.inspect(self).unloaded:
             d['metrics'] = dict((m.name, six.text_type(m.id))
                                 for m in self.metrics)
+        if 'metrics' not in d:
+            d['metrics'] = {}
 
         if self.creator is None:
             d['created_by_user_id'] = d['created_by_project_id'] = None
