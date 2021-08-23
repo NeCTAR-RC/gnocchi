@@ -54,27 +54,27 @@ class InfluxDBStorage(incoming.IncomingDriver):
 
     def _batch_points(self, retention_policy, points):
         overflow = False
-        queue = self._get_queue(retention_policy)
+        rp_queue = self._get_queue(retention_policy)
         for point in points:
-            self._maybe_flush(retention_policy, queue)
+            self._maybe_flush(retention_policy, rp_queue)
             try:
-                queue.put_nowait(point)
+                rp_queue.put_nowait(point)
             except queue.Full:
                 overflow = True
             if overflow:
                 LOG.warning('Failed to record metering data: '
                             'meter spool is full.')
 
-    def _maybe_flush(self, retention_policy, queue):
-        LOG.debug('Queue size %s/%s', queue.qsize(), self.spool_size)
-        if queue.qsize() >= self.spool_size:
-            self._flush(retention_policy, queue)
+    def _maybe_flush(self, retention_policy, rp_queue):
+        LOG.debug('Queue size %s/%s', rp_queue.qsize(), self.spool_size)
+        if rp_queue.qsize() >= self.spool_size:
+            self._flush(retention_policy, rp_queue)
 
-    def _flush(self, retention_policy, queue):
+    def _flush(self, retention_policy, rp_queue):
         points = []
         while len(points) < self.spool_size:
             try:
-                points.append(queue.get_nowait())
+                points.append(rp_queue.get_nowait())
             except queue.Empty:
                 break
         LOG.debug("Sending %s points", len(points))
