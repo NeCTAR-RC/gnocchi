@@ -85,6 +85,7 @@ class InfluxDBStorage(storage.StorageDriver):
         return "%s: %s" % (self.__class__.__name__, str(self.database))
 
     def setup_archive_policy(self, ap, reset=False):
+        LOG.debug("Nectar: setup new archive policy %s", ap.name)
         incoming_measure = self._get_incoming_measurement(ap)
         # Set up an archive policy for incoming measures
         incoming_rp = self.setup_incoming_rp(ap)
@@ -128,6 +129,10 @@ class InfluxDBStorage(storage.StorageDriver):
                 if parent_measure is None:
                     parent_measure = incoming_measure
 
+                # For rate:mean CQ, we should use low granularity
+                # "mean" instead of "rate:mean" as its parent measures
+                parent_measure = parent_measure.replace('_rate', '')
+
                 resample_for = granularity * 2
 
                 cq_query = self.CQ_QUERY % dict(
@@ -154,6 +159,7 @@ class InfluxDBStorage(storage.StorageDriver):
     def setup_incoming_rp(self, ap):
         # Set up an archive policy for incoming measures
         incoming_rp = self._get_incoming_rp_name(ap)
+        LOG.debug("Nectar: setup incoming retention policy %s", incoming_rp)
         self.influx.create_retention_policy(name=incoming_rp, duration='INF',
                                             replication=1)
         return incoming_rp
@@ -176,6 +182,8 @@ class InfluxDBStorage(storage.StorageDriver):
             return 'STDDEV(value)'
         elif aggregation.endswith('pct'):
             return 'PERCENTILE(value,%s)' % aggregation.split('p')[0]
+        elif aggregation.startswith("rate:"):
+            return 'DERIVATIVE(%s(value))' % aggregation.split(':')[1]
         else:
             return '%s(value)' % aggregation
 
@@ -189,12 +197,17 @@ class InfluxDBStorage(storage.StorageDriver):
     def _get_measurement_name(self, ap, aggregation, granularity):
         return "%s_%s_%s_%s" % (influxdb_common.MEASUREMENT_PREFIX,
                                 self._sanitize_ap_name(ap.name),
-                                aggregation,
+                                self._sanitize_aggregation_name(aggregation),
                                 int(int(granularity) / 10e8))
 
     @staticmethod
     def _sanitize_ap_name(name):
         return name.replace('-', '')
+
+    @staticmethod
+    def _sanitize_aggregation_name(name):
+        # aggregation method like rate:mean will be changed to rate_mean
+        return name.replace(':', '_')
 
     def _earliest_time(self, measurement, rp=None, metrics=None):
         """Find the earliest point for a metric"""

@@ -119,6 +119,7 @@ class InfluxDBStorage(incoming.IncomingDriver):
             if self.spool_size > 0:
                 self._batch_points(rp, points)
             else:
+                LOG.debug("Nectar: write points %s", points)
                 self.influx.write_points(points=points,
                                          time_precision='n',
                                          database=self.database,
