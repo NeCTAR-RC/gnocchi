@@ -351,7 +351,7 @@ class ArchivePolicyRulesController(rest.RestController):
             voluptuous.Required("name"): six.text_type,
             voluptuous.Required("metric_pattern"): six.text_type,
             voluptuous.Required("archive_policy_name"): six.text_type,
-            })
+        })
 
         body = deserialize_and_validate(ArchivePolicyRuleSchema)
         enforce("create archive policy rule", body)
@@ -389,7 +389,7 @@ class ArchivePolicyRuleController(rest.RestController):
     def patch(self):
         ArchivePolicyRuleSchema = voluptuous.Schema({
             voluptuous.Required("name"): six.text_type,
-            })
+        })
         body = deserialize_and_validate(ArchivePolicyRuleSchema)
         enforce("update archive policy rule", {})
         try:
@@ -911,7 +911,7 @@ class ResourceTypeController(rest.RestController):
                 self._name, add_attributes=add_attrs,
                 del_attributes=del_attrs)
         except indexer.NoSuchResourceType as e:
-                abort(400, six.text_type(e))
+            abort(400, six.text_type(e))
 
     @pecan.expose()
     def delete(self):
@@ -2195,10 +2195,10 @@ class VersionsController(object):
                         {
                             "rel": "self",
                             "href": pecan.request.application_url + "/v1/"
-                            }
-                        ],
+                        }
+                    ],
                     "id": "v1.0",
                     "updated": "2015-03-19"
-                    }
-                ]
-            }
+                }
+            ]
+        }

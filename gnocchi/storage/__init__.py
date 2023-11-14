@@ -107,7 +107,7 @@ class CorruptionError(ValueError, StorageError):
 
 
 class SackLockTimeoutError(StorageError):
-        pass
+    pass
 
 
 @utils.retry_on_exception_and_log("Unable to initialize storage driver")

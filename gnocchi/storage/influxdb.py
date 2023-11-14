@@ -451,7 +451,7 @@ class InfluxDBStorage(storage.StorageDriver):
             key=operator.attrgetter('granularity'), reverse=True)
 
         if not defs:
-            raise storage.GranularityDoesNotExist(metric[0], granularity)
+            raise storage.GranularityDoesNotExist(metrics[0], granularity)
 
         for definition in defs:
             rp = "rp_%s" % int(definition.timespan)
