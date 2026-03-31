@@ -65,12 +65,12 @@ LOG = daiquiri.getLogger(__name__)
 
 class InfluxDBStorage(storage.StorageDriver):
 
-    CQ_QUERY = """CREATE CONTINUOUS QUERY %(measure)s ON "%(database)s"
+    CQ_QUERY = """CREATE CONTINUOUS QUERY "%(measure)s" ON "%(database)s"
     RESAMPLE FOR %(resample_for)ss
     BEGIN
     SELECT %(aggregation_method)s AS value INTO
-    "%(database)s"."%(retention)s".%(measure)s FROM
-    "%(database)s"."%(parent_retention)s".%(parent_measure)s GROUP BY
+    "%(database)s"."%(retention)s"."%(measure)s" FROM
+    "%(database)s"."%(parent_retention)s"."%(parent_measure)s" GROUP BY
     time(%(granularity)ss), metric_id END"""
 
     def __init__(self, conf, coord=None):
@@ -116,12 +116,12 @@ class InfluxDBStorage(storage.StorageDriver):
 
                 if reset:
                     try:
-                        self._query('DROP MEASUREMENT %s' % measure)
+                        self._query('DROP MEASUREMENT "%s"' % measure)
                     except influxdb.exceptions.InfluxDBClientError:
                         # Already gone so ignore
                         pass
 
-                    self._query('DROP CONTINUOUS QUERY %s ON %s' % (
+                    self._query('DROP CONTINUOUS QUERY "%s" ON "%s"' % (
                         measure, self.database))
 
                 if parent_retention is None:
@@ -218,9 +218,9 @@ class InfluxDBStorage(storage.StorageDriver):
                  for metric in metrics])
             where = "WHERE " + metrics_or
         if rp:
-            measurement_select = "%s.%s" % (rp, measurement)
+            measurement_select = '"%s"."%s"' % (rp, measurement)
         else:
-            measurement_select = measurement
+            measurement_select = '"%s"' % measurement
         query = "SELECT * FROM %s %s ORDER BY time ASC LIMIT 1" % (
             measurement_select, where)
         result = self._query(query)
@@ -242,8 +242,8 @@ class InfluxDBStorage(storage.StorageDriver):
         measurement = self._get_incoming_measurement(ap)
         rp = self.setup_incoming_rp(ap)
         result = self._query(
-            "SELECT * FROM %s.%s ORDER BY time ASC LIMIT 1" % (rp,
-                                                               measurement))
+            'SELECT * FROM "%s"."%s" ORDER BY time ASC LIMIT 1' % (
+                rp, measurement))
         if not result:
             return
         start_time = self._earliest_time(measurement, rp=rp)
@@ -300,7 +300,7 @@ class InfluxDBStorage(storage.StorageDriver):
 
                 rp = "rp_%s" % int(definition.timespan)
                 query = ("DELETE FROM "
-                         "%(database)s.\"%(rp)s\".%(measure)s WHERE "
+                         "\"%(database)s\".\"%(rp)s\".\"%(measure)s\" WHERE "
                          "metric_id='%(metric_id)s'"
                          % dict(database=self.database,
                                 rp=rp,
@@ -353,7 +353,7 @@ class InfluxDBStorage(storage.StorageDriver):
             rp = "rp_%s" % int((int(definition.timespan) / 10e8))
 
             query = ("SELECT value as \"%(aggregation)s\" FROM "
-                     "%(database)s.%(rp)s.%(measure)s WHERE "
+                     "\"%(database)s\".\"%(rp)s\".\"%(measure)s\" WHERE "
                      "metric_id='%(metric_id)s' %(times)s fill(null) "
                      "ORDER BY time DESC LIMIT %(points)d"
                      % dict(database=self.database,
@@ -492,7 +492,7 @@ class InfluxDBStorage(storage.StorageDriver):
                 ["metric_id = '%s'" % self._get_metric_id(metric)
                  for metric in metrics])
             query = ("SELECT %(i_aggregation)s FROM "
-                     "%(database)s.%(rp)s.%(measure)s WHERE "
+                     "\"%(database)s\".\"%(rp)s\".\"%(measure)s\" WHERE "
                      "%(metrics)s %(times)s GROUP BY time(%(granularity)ds) "
                      "fill(none) ORDER BY time DESC LIMIT %(points)d"
                      % dict(database=self.database,

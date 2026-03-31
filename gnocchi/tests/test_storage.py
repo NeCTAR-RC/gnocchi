@@ -1035,6 +1035,51 @@ class TestStorageDriver(tests_base.TestCase):
                              resample=numpy.timedelta64(1, 'h')))
 
 
+class TestInfluxDBStorageQuoting(tests_base.TestCase):
+    def test_setup_archive_policy_quotes_special_character_identifiers(self):
+        driver = influxdb.InfluxDBStorage.__new__(influxdb.InfluxDBStorage)
+        driver.database = 'gnocchi'
+        driver.influxdb_disable_retention_policies = True
+        driver.conf = mock.Mock()
+        driver.influx = mock.Mock()
+        driver._query = mock.Mock()
+        driver._backfill_data = mock.Mock()
+        driver.setup_incoming_rp = mock.Mock(return_value='incoming_rp')
+        driver._get_incoming_measurement = mock.Mock(
+            return_value='samples_ceilometerlowrate')
+        driver._get_measurement_name = mock.Mock(
+            return_value='samples_ceilometerlowrate_rate:mean_600')
+
+        ap = archive_policy.ArchivePolicy(
+            'ceilometer-lowrate', 0, [(60, 600)],
+            aggregation_methods=['rate:mean'])
+
+        driver.setup_archive_policy(ap, reset=True)
+
+        queries = [
+            call_args[0][0]
+            for call_args in driver._query.call_args_list
+        ]
+        self.assertIn(
+            'DROP MEASUREMENT "samples_ceilometerlowrate_rate:mean_600"',
+            queries)
+        self.assertIn(
+            ('DROP CONTINUOUS QUERY '
+             '"samples_ceilometerlowrate_rate:mean_600" ON "gnocchi"'),
+            queries)
+        self.assertIn(
+            ('CREATE CONTINUOUS QUERY '
+             '"samples_ceilometerlowrate_rate:mean_600" ON "gnocchi"\n'
+             'RESAMPLE FOR 1200s\n'
+             'BEGIN\n'
+             'SELECT DERIVATIVE(mean(value)) AS value INTO\n'
+             '"gnocchi"."rp_36000"."samples_ceilometerlowrate_rate:mean_600"\n'
+             'FROM\n'
+             '"gnocchi"."incoming_rp"."samples_ceilometerlowrate" GROUP BY\n'
+             'time(600s), metric_id END'),
+            queries)
+
+
 class TestMeasureQuery(tests_base.TestCase):
     def test_equal(self):
         q = storage.MeasureQuery({"=": 4})
